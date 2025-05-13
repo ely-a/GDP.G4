@@ -2,7 +2,7 @@
 % type "aeroDataPackage" into the command window and get the planetary data
 
 t_start = juliandate(2025,5,12);
-t_end = t_start + 1e4;
+t_end = t_start + 1e3;
 t_query = (t_start:t_end)';
 r = zeros(length(t_query), 21);
 v = zeros(length(t_query), 21);
@@ -32,7 +32,7 @@ zrange = [min(r(:, 9)), max(r(:, 9))];
 
 
 % iterate lambert's problem to get graphs
-tf_list = (10:2000)'; % times of flight to check;
+tf_list = (10:400)'; % times of flight to check;
 mu = 1.327e11;
 visviva = getVisViva(r, v, 2, 1, tf_list, mu, 0);
 y1 = visviva(:, 1);
@@ -40,14 +40,12 @@ y2 = visviva(:, 2);
 
 
 initial_v_inf = 7; % km/s
-sequence = [2, 3, 2, 4, 5, 7];
+sequence = [2, 1, 2, 4, 5, 7];
 time_elapsed = 0;
 
 for num = 1:length(sequence)-1
     planet = sequence(num);
     visviva = getVisViva(r, v, sequence(num+1), sequence(num), tf_list, mu, time_elapsed);
-    % output data
-    %...
     y1 = visviva(:, 1);
     y2 = visviva(:, 2);
     if num == 1
@@ -55,26 +53,19 @@ for num = 1:length(sequence)-1
     else
         y_target = y2_target; % use the old v_inf
     end
+    disp(y_target)
     % find the tof which gives the closest v_inf
-    % Initialize result arrays
-    x_targets = [];
-    y2_targets = [];
-    
     for i = 1:length(tf_list)-1
         if (y1(i) - y_target) * (y1(i+1) - y_target) < 0
             % Linear interpolation factor
             t = (y_target - y1(i)) / (y1(i+1) - y1(i));
-            
             % Interpolate x and y2 at crossing point
             x_target = tf_list(i) + t * (tf_list(i+1) - tf_list(i));
             y2_target = y2(i) + t * (y2(i+1) - y2(i));
-            
-            % Store results
-            x_targets(end+1) = x_target;
-            y2_targets(end+1) = y2_target;
+            time_elapsed = time_elapsed + x_target;
+            break; % Stop at first crossing
         end
     end
-    time_elapsed = time_elapsed + x_target;
     figure
     semilogy(tf_list, visviva(:, 1))
     hold on
