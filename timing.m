@@ -1,7 +1,7 @@
 % REQUIRED ADD-ONS
 % type "aeroDataPackage" into the command window and get the planetary data
 
-t_start = juliandate(2030,5,12);
+t_start = juliandate(2025,5,12);
 t_end = t_start + 1e3;
 t_query = (t_start:t_end)';
 r = zeros(length(t_query), 21);
@@ -111,14 +111,6 @@ legend("Departing Earth", "Arriving at Venus")
 %     zlim(zrange);
 %     pause(1e-1)
 % end
-
-% sequence
-% [V E J N]
-sequence = [1 2 4 7];
-initialTOF = 140; %days
-for flyby = 1:length(sequence)
-    
-end
 
 
 % for plotting only
