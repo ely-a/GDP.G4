@@ -1,4 +1,4 @@
-function result = computeInterplanetaryTransfer(departurePlanet, arrivalPlanet, launchDate, arrivalDate)
+function result = computeInterplanetaryTransfer(departurePlanet, arrivalPlanet, launchDate, arrivalDate, plotFlag)
 % computeInterplanetaryTransfer
 % Solves the interplanetary Lambert problem and returns transfer orbit info
 %
@@ -69,7 +69,7 @@ function result = computeInterplanetaryTransfer(departurePlanet, arrivalPlanet, 
     result.energy = norm(dvi)^2;
 
     % Optional Plotting
-    % if plotFlag
-    %     plotInterplanetaryTransfer(mu, aunit, ip1, ip2, jdate1, jdate2, ri, vito);
-    % end
+    if plotFlag 
+        plotInterplanetaryTransfer(mu, aunit, ip1, ip2, jdate1, jdate2, ri, vito, departurePlanet, arrivalPlanet);
+    end
 end

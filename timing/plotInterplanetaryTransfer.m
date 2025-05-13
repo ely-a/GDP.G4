@@ -1,4 +1,4 @@
-function plotInterplanetaryTransfer(mu, aunit, ip1, ip2, jdate1, jdate2, ri, vito)
+function plotInterplanetaryTransfer(mu, aunit, ip1, ip2, jdate1, jdate2, ri, vito, departurePlanet, arrivalPlanet)
     % Plot Lambert transfer and planetary orbits
     deltat = 10; % days
 
@@ -40,8 +40,8 @@ function plotInterplanetaryTransfer(mu, aunit, ip1, ip2, jdate1, jdate2, ri, vit
 
     figure;
     hold on;
-    plot(x1, y1, '-b', 'DisplayName', 'Departure Orbit');
-    plot(x2, y2, '-g', 'DisplayName', 'Arrival Orbit');
+    plot(x1, y1, '-b', 'DisplayName', strcat('Departure Orbit - ', departurePlanet));
+    plot(x2, y2, '-g', 'DisplayName', strcat('Arrival Orbit - ', arrivalPlanet));
     plot(x3, y3, '-r', 'DisplayName', 'Transfer Trajectory');
     plot(0, 0, 'yo', 'MarkerSize', 10, 'DisplayName', 'Sun');
     legend;
