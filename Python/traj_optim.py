@@ -34,10 +34,11 @@ def main():
 
     prob = pg.problem(udp)
     uda = pg.sade(gen=200)
-    archi = pg.archipelago(algo=uda, prob=prob, n=16, pop_size=40)
+    no_islands = 8
+    archi = pg.archipelago(algo=uda, prob=prob, n=no_islands, pop_size=20)
 
-    print(f"Running optimization on {archi.n} islands...")
-    archi.evolve(50)
+    print(f"Running optimization on {no_islands} islands...")
+    archi.evolve(20)
     archi.wait()
 
     sols = archi.get_champions_f()
@@ -46,15 +47,13 @@ def main():
 
     print("Best delta-v:", sols[idx])
     udp.pretty(x_best)
-
-    for i, t in enumerate(udp.get_t_P(x_best)):
-        print(f"Epoch {i}: {t.mjd2000} → Year: {pk.epoch(t).calendar()}")  # Check if any > 2050
-
     
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    udp.plot(x_best, ax=ax)
-    plt.show()
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # udp.plot(x_best, ax=ax)
+    # plt.show()
+
+    print(udp._decode_times_and_vinf(x_best))
 
 if __name__ == '__main__':
     main()
