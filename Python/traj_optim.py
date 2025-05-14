@@ -10,16 +10,15 @@ def to_mjd2000(date):
     return (date - datetime(2000, 1, 1)).days
 
 def main():
-    seq = [jpl_lp('earth'), jpl_lp('mars'), jpl_lp('earth'), jpl_lp('jupiter'), jpl_lp('saturn'), jpl_lp('neptune')]
-    t0 = [to_mjd2000(datetime(2028, 5, 13)), to_mjd2000(datetime(2031, 5, 13))]
+    seq = [jpl_lp('earth'), jpl_lp('mars'), jpl_lp('jupiter'), jpl_lp('neptune')]
+    # seq = [jpl_lp('earth'), jpl_lp('mars'), jpl_lp('earth'), jpl_lp('jupiter'), jpl_lp('saturn'), jpl_lp('neptune')]
+    t0 = [to_mjd2000(datetime(2029, 5, 13)), to_mjd2000(datetime(2032, 5, 13))]
     tof = [
-        [100, 250],     # Earth → Mars
-        [150, 500],     # Mars → Earth
-        [300, 800],     # Earth → Jupiter
-        [400, 1000],    # Jupiter → Saturn
-        [600, 1750]     # Saturn → Neptune
+        [100, 200],     
+        [150, 600],   
+        [300, 3500],     
     ]
-    vinf = [3, 10]
+    vinf = [6, 9.5]
 
     udp = mga_1dsm(
         seq=seq,
@@ -34,11 +33,11 @@ def main():
 
     prob = pg.problem(udp)
     uda = pg.sade(gen=200)
-    no_islands = 8
-    archi = pg.archipelago(algo=uda, prob=prob, n=no_islands, pop_size=20)
+    no_islands = 16
+    archi = pg.archipelago(algo=uda, prob=prob, n=no_islands, pop_size=40)
 
     print(f"Running optimization on {no_islands} islands...")
-    archi.evolve(20)
+    archi.evolve(50)
     archi.wait()
 
     sols = archi.get_champions_f()
@@ -52,8 +51,6 @@ def main():
     # ax = fig.add_subplot(111, projection='3d')
     # udp.plot(x_best, ax=ax)
     # plt.show()
-
-    print(udp._decode_times_and_vinf(x_best))
 
 if __name__ == '__main__':
     main()
