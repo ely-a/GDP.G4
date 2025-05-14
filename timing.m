@@ -4,11 +4,14 @@
 close all
 clc
 
+t_start = juliandate(2031,2,9);
+t_end = t_start + 5e3;
+
 % Define the list of variables to keep
 dataVars = {'r', 'v'};
 missingData = ~all(cellfun(@(v) evalin('base', sprintf('exist(''%s'', ''var'')', v)), dataVars));
 if missingData
-    clearvars
+    clearvars -except t_start t_end
     t_query = (t_start:t_end)';
     r = zeros(length(t_query), 21);
     v = zeros(length(t_query), 21);
@@ -28,24 +31,33 @@ if missingData
     [r(:, 19:21), v(:, 19:21)] = planetEphemeris(t_query, "SolarSystem", "Neptune", "430");
 else
     % Keep data variables, clear everything else
-    clearvars -except r v
+    clearvars -except r v t_start t_end
 end
 
 planetList = ["Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"];
-t_start = juliandate(2031,2,9);
-t_end = t_start + 2e4;
 
-% xrange = [min(r(:, 7)), max(r(:, 7))]; % this will be for mars's orbit
-% yrange = [min(r(:, 8)), max(r(:, 8))];
-% zrange = [min(r(:, 9)), max(r(:, 9))];
-xrange = [min(r(:, 19)), max(r(:, 19))]; % this will be for neptune's orbit
-yrange = [min(r(:, 20)), max(r(:, 20))];
-zrange = [min(r(:, 21)), max(r(:, 21))];
+xrange = [-5e9 5e9]; % this will be for neptune's orbit
+yrange = [-5e9 5e9];
+zrange = [-1e9 1e9];
+
+% Define planet colors
+colors = [
+    0.95, 0.75, 0.10;  % Venus
+    0.00, 0.45, 0.74;  % Earth
+    0.85, 0.33, 0.10;  % Mars
+    0.80, 0.60, 0.40;  % Jupiter
+    0.93, 0.75, 0.50;  % Saturn
+    0.40, 0.80, 0.90;  % Uranus
+    0.30, 0.40, 0.85;  % Neptune
+    0, 0, 0 % s/c
+];
 
 
 
 % iterate lambert's problem to get graphs
-mu = 1.327e11;
+mu = 1.32712e11; % for the sun
+mu_planets = [3.24859e5, 3.98600e5, 4.28284e4, 1.26687e8, 3.7912e7, 5.79394e6, 6.83653e6];
+r_planets = [6051.8, 6378.1, 3396.2, 71492, 60268, 25559, 24764];
 initial_v_inf = 8.6; % km/s
 sequence = [2, 3, 4, 7]; % 1 = Venus --> 7 = Neptune
 max_lengths = [2000, 2000, 4000]; % transfer times (days)
@@ -56,14 +68,13 @@ for time_elapsed = 0:1:0
     disp(strcat("Time past initial launch date: ", num2str(time_elapsed)))
     failed = false;
     initial_t = time_elapsed;
+    flyby_vlist = zeros(1, 3);
     
     for num = 1:length(sequence)-1
         planet = sequence(num);
         tf_list = (10:max_lengths(num))'; % times of flight to check;
         visviva = getVisViva(r, v, sequence(num), sequence(num+1), tf_list, mu, time_elapsed);
-        % output data
-        % at flybys: v_inf, v_pe, r_pe
-        % final: closest to Sun, furthest from Earth, total time
+        % vis-viva matching
         y1 = visviva(:, 1);
         y2 = visviva(:, 2);
         if num == 1
@@ -111,10 +122,10 @@ for time_elapsed = 0:1:0
         % xline(x_target)
         % 
         %data output
-        % disp("--------------------------------")
-        % disp(strcat(planetList(sequence(num)), " to ", planetList(sequence(num+1))))
-        % disp(strcat("Time of flight: ", num2str(x_target), " days"))
-        % disp(strcat("Arrival V_inf: ", num2str(y2_target ^ 0.5), " km/s"))
+        disp("--------------------------------")
+        disp(strcat(planetList(sequence(num)), " to ", planetList(sequence(num+1))))
+        disp(strcat("Time of flight: ", num2str(x_target), " days"))
+        disp(strcat("Arrival V_inf: ", num2str(y2_target ^ 0.5), " km/s"))
         % ===============================================
     
         % plotting
@@ -123,11 +134,17 @@ for time_elapsed = 0:1:0
         idx1 = (3*p1-2):3*p1; % to find the right ephimeris, e.g. 4:6 for planet 2
         idx2 = (3*p2-2):3*p2;
         tf = floor(x_target);
+        % position and velocity of the flyby planet
         r1 = r(1+floor(time_elapsed), idx1);
         r2 = r(1+tf+floor(time_elapsed), idx2);
-        [V1, ~] = lambert2(r1, r2, tf, 0, mu);
+        v1 = v(1+floor(time_elapsed), idx1);
+        v2 = v(1+tf+floor(time_elapsed), idx2);
+        % propagation
+        [V1, V2] = lambert2(r1, r2, tf, 0, mu);
         r_leg = propagate_orbit(r1, V1, tf, mu);
         r_out = [r_out; r_leg];
+        % relative velocity to calculate flyby parameters
+        flyby_vlist = [flyby_vlist; V1-v1; V2-v2];
 
         time_elapsed = time_elapsed + x_target;
 
@@ -145,6 +162,23 @@ for time_elapsed = 0:1:0
         launch_JD = t_start + initial_t;
         launch_date = datetime(launch_JD, 'ConvertFrom', 'juliandate');
         disp(strcat("Launch Date: ", string(launch_date)));
+        disp("====================== Flyby information ======================")
+
+        % flyby calculations
+        flyby_vlist(1, :) = []; % remove initial zeroes
+        for flyby = 1:length(sequence)-2 % as no flyby occurs at Earth or Neptune
+            initialV = flyby_vlist(2*flyby, :);
+            finalV = flyby_vlist(2*flyby+1, :);
+            turn_angle = acos(dot(initialV, finalV) / norm(initialV) / norm(finalV));
+            ecc = 1 / sin(turn_angle / 2);
+            sma = mu_planets(sequence(flyby+1)) / norm(finalV)^2;
+            r_p = sma * ecc-1;
+            radius = r_planets(sequence(flyby+1));
+            alt = r_p - radius;
+            planet_name = planetList(sequence(flyby+1));
+            disp(strcat(planet_name, " flyby: Altitude = ", num2str(alt), " km"))
+        end
+
     end
 end
 
@@ -155,17 +189,6 @@ axis equal
 grid on
 
 % Planet names for labeling
-
-% Color palette for different planets
-colors = [
-    0.91, 0.72, 0.43;  % Venus - pale yellow
-    0.20, 0.50, 1.00;  % Earth - blue
-    0.80, 0.36, 0.27;  % Mars - red-orange
-    0.87, 0.71, 0.53;  % Jupiter - beige and orange bands
-    0.93, 0.82, 0.50;  % Saturn - pale gold
-    0.56, 0.75, 0.87;  % Uranus - light blue
-    0.38, 0.51, 0.93   % Neptune - deep blue
-];
 
 hold on
 xlabel('X (km)');
@@ -180,60 +203,52 @@ for i = 1:length(planetList)
 end
 legend show;
 
-% % Initialize the figure
-% figure;
-% axis equal;
-% 
-% xlabel('X (km)');
-% ylabel('Y (km)');
-% zlabel('Z (km)');
-% view(3);
-% hold on;
-% 
-% % Define planet colors
-% planet_colors = [
-%     0.95, 0.75, 0.10;  % Venus
-%     0.00, 0.45, 0.74;  % Earth
-%     0.85, 0.33, 0.10;  % Mars
-%     0.80, 0.60, 0.40;  % Jupiter
-%     0.93, 0.75, 0.50;  % Saturn
-%     0.40, 0.80, 0.90;  % Uranus
-%     0.30, 0.40, 0.85;  % Neptune
-%     0, 0, 0 % s/c
-% ];
-% 
-% nSteps = length(t_query);
-% nPlanets = 8;
-% trail = gobjects(nPlanets,1);
-% dot = gobjects(nPlanets,1);
-% 
-% for i = [1 2 3 8]
-%     trail(i) = plot3(NaN, NaN, NaN, 'Color', planet_colors(i,:), 'LineWidth', 1.5);
-%     dot(i) = plot3(NaN, NaN, NaN, 'o', 'MarkerSize', 6, ...
-%                    'MarkerFaceColor', planet_colors(i,:), 'MarkerEdgeColor', 'k');
-% end
-% 
-% % Animation loop
-% for k = 1:10:nSteps  % Skip some steps to speed up animation
-%     for i = [1 2 3 8]
-%         idx = (i-1)*3 + 1;
-%         % Update trails
-%         set(trail(i), 'XData', r(1:k, idx), ...
-%                       'YData', r(1:k, idx+1), ...
-%                       'ZData', r(1:k, idx+2));
-%         % Update dots
-%         set(dot(i), 'XData', r(k, idx), ...
-%                     'YData', r(k, idx+1), ...
-%                     'ZData', r(k, idx+2));
-%     end
-%     drawnow;
-%     axis equal
-%     grid on
-%     xlim(xrange);
-%     ylim(yrange);
-%     zlim(zrange);
-%     pause(1e-1)
-% end
+% Initialize the figure
+figure;
+axis equal;
+
+xlabel('X (km)');
+ylabel('Y (km)');
+zlabel('Z (km)');
+view(3);
+hold on;
+
+% add s/c to plotting array
+r_truncated = r(1:size(r_out,1), :);
+r_plot = [r_truncated r_out];
+
+nSteps = size(r_plot, 1);
+nPlanets = 8;
+trail = gobjects(nPlanets,1);
+dot = gobjects(nPlanets,1);
+
+for i = [sequence 8]
+    trail(i) = plot3(NaN, NaN, NaN, 'Color', colors(i,:), 'LineWidth', 1.5);
+    dot(i) = plot3(NaN, NaN, NaN, 'o', 'MarkerSize', 6, ...
+                   'MarkerFaceColor', colors(i,:), 'MarkerEdgeColor', 'k');
+end
+
+% Animation loop
+for k = 1:20:nSteps  % Skip some steps to speed up animation
+    for i = [sequence 8]
+        idx = (i-1)*3 + 1;
+        % Update trails
+        set(trail(i), 'XData', r_plot(1:k, idx), ...
+                      'YData', r_plot(1:k, idx+1), ...
+                      'ZData', r_plot(1:k, idx+2));
+        % Update dots
+        set(dot(i), 'XData', r_plot(k, idx), ...
+                    'YData', r_plot(k, idx+1), ...
+                    'ZData', r_plot(k, idx+2));
+    end
+    drawnow;
+    axis equal
+    grid on
+    xlim(xrange);
+    ylim(yrange);
+    zlim(zrange);
+    pause(1e-6)
+end
 
 
 % for plotting only
