@@ -5,7 +5,7 @@ close all
 clc
 
 t_start = juliandate(2031,2,9);
-t_end = t_start + 5e3;
+t_end = t_start + 1e4;
 
 % Define the list of variables to keep
 dataVars = {'r', 'v'};
@@ -38,7 +38,7 @@ planetList = ["Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"
 
 xrange = [-5e9 5e9]; % this will be for neptune's orbit
 yrange = [-5e9 5e9];
-zrange = [-1e9 1e9];
+zrange = [-2e9 2e9];
 
 % Define planet colors
 colors = [
@@ -58,14 +58,17 @@ colors = [
 mu = 1.32712e11; % for the sun
 mu_planets = [3.24859e5, 3.98600e5, 4.28284e4, 1.26687e8, 3.7912e7, 5.79394e6, 6.83653e6];
 r_planets = [6051.8, 6378.1, 3396.2, 71492, 60268, 25559, 24764];
-initial_v_inf = 8.6; % km/s
+initial_v_inf = 8.59; % km/s
 sequence = [2, 3, 4, 7]; % 1 = Venus --> 7 = Neptune
-max_lengths = [2000, 2000, 4000]; % transfer times (days)
-%time_elapsed = 0;
-
+max_lengths = [1000, 2000, 5000]; % transfer times (days)
+initial_LEO_alt = 300; %km
+final_neptune_alt = 1000; %km
+dv_launch = sqrt(initial_v_inf^2 + 2 * mu_planets(sequence(1)) /...
+    (initial_LEO_alt + r_planets(sequence(1)))) - sqrt(mu_planets(sequence(1)) /...
+    (initial_LEO_alt + r_planets(sequence(1))));
 for time_elapsed = 0:1:0
     r_out = zeros(1, 3);
-    disp(strcat("Time past initial launch date: ", num2str(time_elapsed)))
+    disp(strcat("Time past initial launch date: ", num2str(time_elapsed), " days"))
     failed = false;
     initial_t = time_elapsed;
     flyby_vlist = zeros(1, 3);
@@ -135,10 +138,23 @@ for time_elapsed = 0:1:0
         idx2 = (3*p2-2):3*p2;
         tf = floor(x_target);
         % position and velocity of the flyby planet
-        r1 = r(1+floor(time_elapsed), idx1);
-        r2 = r(1+tf+floor(time_elapsed), idx2);
-        v1 = v(1+floor(time_elapsed), idx1);
-        v2 = v(1+tf+floor(time_elapsed), idx2);
+        t_floor = floor(time_elapsed);
+        t_ceil = ceil(time_elapsed);
+        alpha = time_elapsed - t_floor;  % Fractional part for interpolation
+        % Get lower and upper vectors
+        r1_lower = r(1 + t_floor, idx1);
+        r1_upper = r(1 + t_ceil, idx1);
+        r2_lower = r(1 + tf + t_floor, idx2);
+        r2_upper = r(1 + tf + t_ceil, idx2);
+        v1_lower = v(1 + t_floor, idx1);
+        v1_upper = v(1 + t_ceil, idx1);
+        v2_lower = v(1 + tf + t_floor, idx2);
+        v2_upper = v(1 + tf + t_ceil, idx2);
+        % Linearly interpolate each
+        r1 = (1 - alpha) * r1_lower + alpha * r1_upper;
+        r2 = (1 - alpha) * r2_lower + alpha * r2_upper;
+        v1 = (1 - alpha) * v1_lower + alpha * v1_upper;
+        v2 = (1 - alpha) * v2_lower + alpha * v2_upper;
         % propagation
         [V1, V2] = lambert2(r1, r2, tf, 0, mu);
         r_leg = propagate_orbit(r1, V1, tf, mu);
@@ -162,6 +178,11 @@ for time_elapsed = 0:1:0
         launch_JD = t_start + initial_t;
         launch_date = datetime(launch_JD, 'ConvertFrom', 'juliandate');
         disp(strcat("Launch Date: ", string(launch_date)));
+        dv_capture = sqrt(y2_target + 2 * mu_planets(sequence(end)) /...
+        (final_neptune_alt + r_planets(sequence(end)))) - sqrt(mu_planets(sequence(end)) /...
+        (final_neptune_alt + r_planets(sequence(end))));
+        total_dv = dv_launch + dv_capture;
+        disp(strcat("Total ΔV: ", num2str(total_dv), " km/s"))
         disp("====================== Flyby information ======================")
 
         % flyby calculations
@@ -175,8 +196,9 @@ for time_elapsed = 0:1:0
             r_p = sma * ecc-1;
             radius = r_planets(sequence(flyby+1));
             alt = r_p - radius;
+            radius_number = r_p / radius;
             planet_name = planetList(sequence(flyby+1));
-            disp(strcat(planet_name, " flyby: Altitude = ", num2str(alt), " km"))
+            disp(strcat(planet_name, " flyby: Altitude = ", num2str(alt), " km (", num2str(radius_number), " radii)"))
         end
 
     end
@@ -222,15 +244,20 @@ nPlanets = 8;
 trail = gobjects(nPlanets,1);
 dot = gobjects(nPlanets,1);
 
-for i = [sequence 8]
+for i = 1:8
     trail(i) = plot3(NaN, NaN, NaN, 'Color', colors(i,:), 'LineWidth', 1.5);
     dot(i) = plot3(NaN, NaN, NaN, 'o', 'MarkerSize', 6, ...
                    'MarkerFaceColor', colors(i,:), 'MarkerEdgeColor', 'k');
 end
 
 % Animation loop
+% % Create a VideoWriter object
+% v = VideoWriter('trajectory.mp4', 'MPEG-4'); % You can also use 'Motion JPEG AVI'
+% v.FrameRate = 60; % Set frame rate (optional)
+% open(v); % Open the video file for writing
+
 for k = 1:20:nSteps  % Skip some steps to speed up animation
-    for i = [sequence 8]
+    for i = 1:8
         idx = (i-1)*3 + 1;
         % Update trails
         set(trail(i), 'XData', r_plot(1:k, idx), ...
@@ -244,11 +271,18 @@ for k = 1:20:nSteps  % Skip some steps to speed up animation
     drawnow;
     axis equal
     grid on
+    view(2)
     xlim(xrange);
     ylim(yrange);
     zlim(zrange);
     pause(1e-6)
+
+    % Capture the plot as a frame
+    % frame = getframe(gcf);
+    % writeVideo(v, frame);
+
 end
+% close(v);
 
 
 % for plotting only
