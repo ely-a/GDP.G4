@@ -7,6 +7,7 @@ from pykep.core import lambert_problem
 from pykep.trajopt._lambert import lambert_problem_multirev
 from datetime import datetime, timedelta
 from tqdm import tqdm
+from dateutil.relativedelta import relativedelta
 
 def mjd2000_to_datetime(mjd2000):
     base = datetime(2000, 1, 1, 12)
@@ -77,25 +78,37 @@ for i in tqdm(range(T0.shape[0])):
             delta_v_arrival = v_arrival_hyp - v_circ_neptune
 
             # total_dv = vinf_dep + vinf_arr
-            DV[i,j] = (delta_v_depart+delta_v_arrival) / 1000  # Convert to km/s
+            DV[i,j] = (delta_v_arrival+ delta_v_depart) / 1000  # Convert to km/s
 
             # total_dv = vinf_dep + vinf_arr
             # DV[i, j] = total_dv / 1000  # km/s
 
         except:
+            print("lambert solution failed")
             continue
 
 # Plotting
 fig, ax = plt.subplots(figsize=(10, 6))
 levels = np.linspace(np.nanmin(DV), np.nanmax(DV), 30)
-cs = ax.contourf(T0, TOF, DV, levels=levels, cmap='viridis')
+cs = ax.contourf(T0, TOF, DV, levels=levels, cmap='coolwarm')
 cbar = plt.colorbar(cs)
 cbar.set_label('Total Δv (km/s)')
 
-# Format axes
-t0_dates = [mjd2000_to_datetime(mjd).strftime('%Y-%m') for mjd in t0_grid]
-ax.set_xticks(t0_grid[::4])
-ax.set_xticklabels(t0_dates[::4], rotation=45)
+# Generate monthly ticks for the x-axis
+dt_start = mjd2000_to_datetime(t0_grid[0])
+dt_end = mjd2000_to_datetime(t0_grid[-1])
+month_starts = []
+dt = dt_start.replace(day=1)
+while dt <= dt_end:
+    month_starts.append(dt)
+    dt += relativedelta(months=1)
+
+month_mjd2000 = [datetime_to_mjd2000(dt) for dt in month_starts]
+month_labels = [dt.strftime('%Y-%m') for dt in month_starts]
+
+ax.set_xticks(month_mjd2000)
+ax.set_xticklabels(month_labels, rotation=45)
+
 ax.set_xlabel('Departure Date')
 ax.set_ylabel('Time of Flight (days)')
 ax.set_title('Earth → Neptune Porkchop Plot (Total Δv)')
