@@ -59,10 +59,10 @@ mu = 1.32712e11; % for the sun
 mu_planets = [3.24859e5, 3.98600e5, 4.28284e4, 1.26687e8, 3.7912e7, 5.79394e6, 6.83653e6]; % km^3/s^2
 r_planets = [6051.8, 6378.1, 3396.2, 71492, 60268, 25559, 24764]; % km
 sequence = [2, 7]; % 1 = Venus --> 7 = Neptune
-max_lengths = 1e4; % transfer times (days)
+max_lengths = 4000; % transfer times (days)
 initial_LEO_alt = 300; %km
 final_neptune_alt = 40000; %km
-max_delay = 500; % days past initial launch window
+max_delay = 730; % days past initial launch window
 big_list = zeros(max_lengths - 9, max_delay);
 big_list_launch = zeros(max_lengths - 9, max_delay);
 big_list_capture = zeros(max_lengths - 9, max_delay);
@@ -76,7 +76,7 @@ for time_elapsed = 0:max_delay-1 % adjust to test multiple launch days
     for num = 1:length(sequence)-1
         planet = sequence(num);
         tf_list = (10:max_lengths(num))'; % times of flight to check;
-        visviva = getVisViva(r, v, sequence(num), sequence(num+1), tf_list, mu, time_elapsed);
+        [v1_list, visviva] = getVisViva(r, v, sequence(num), sequence(num+1), tf_list, mu, time_elapsed);
         % vis-viva matching
         y1 = visviva(:, 1);
         y2 = visviva(:, 2);
@@ -112,38 +112,79 @@ end
 % xlabel("Days to reach Neptune")
 % ylabel("dV (km/s)")
 
+[~, best_idx] = min(sum(visviva, 2));
+v1 = v1_list(best_idx, :);
+tf_best = tf_list(best_idx);
+
+% Get planet departure position
+idx1 = (3*sequence(num)-2):3*sequence(num);
+r1 = r(1+floor(time_elapsed), idx1);
+
+% Propagate Lambert arc using two-body motion
+r_sc_traj = propagate_orbit(r1, v1, tf_best, mu);  % Output: Nx3
+
+% Grab planetary positions during transfer
+r_planet_interp = r(1+floor(time_elapsed):1+floor(time_elapsed)+tf_best, :);  % Nx21
+
+% Combine into r_plot
+r_plot = [r_planet_interp, r_sc_traj];  % Nx(21+3)
+
 % Plot
+[nRows, nCols] = size(big_list);
+x = 1:nCols;   % Time past initial launch date (days)
+y = 1:nRows;   % Transfer time (days)
+
 figure;
-imagesc(big_list);        % Display the array as an image
-colorbar;          % Add colorbar to show value scale
-colormap jet;
-xlabel("Time past initial launch date (days)")
-ylabel("Transfer time (days)")
-clim([0 50]);  % Set your desired color range
+imagesc(x, y, big_list);   % Specify x and y axes
+colormap hot;
+colorbar;
+clim([0 50]);              % Focus on low dV
 set(gca, 'YDir', 'normal');
-title("Total dV")
+xlabel("Time past initial launch date (days)");
+ylabel("Transfer time (days)");
+title("Total dV");
+
+% Add contour lines
+hold on;
+levels = 0:2:50;  % Contour levels every 5 units between 0 and 50
+[C, h] = contour(x, y, big_list, levels, 'LineColor', 'k');
+clabel(C, h);  % Add labels to contours
 
 % Plot
 figure;
 imagesc(big_list_launch);        % Display the array as an image
 colorbar;          % Add colorbar to show value scale
-colormap jet;
+colormap hot;
 xlabel("Time past initial launch date (days)")
 ylabel("Transfer time (days)")
 clim([0 30]);  % Set your desired color range
 set(gca, 'YDir', 'normal');
 title("Earth departure dV")
 
+% Add contour lines
+hold on;
+levels = 0:2:30;  % Contour levels every 5 units between 0 and 50
+[C, h] = contour(x, y, big_list_launch, levels, 'LineColor', 'k');
+clabel(C, h);  % Add labels to contours
+
 % Plot
 figure;
 imagesc(big_list_capture);        % Display the array as an image
 colorbar;          % Add colorbar to show value scale
-colormap jet;
+colormap hot;
 xlabel("Time past initial launch date (days)")
 ylabel("Transfer time (days)")
 clim([0 30]);  % Set your desired color range
 set(gca, 'YDir', 'normal');
 title("Neptune capture dV")
+
+% Add contour lines
+hold on;
+levels = 0:2:30;  % Contour levels every 5 units between 0 and 50
+[C, h] = contour(x, y, big_list_capture, levels, 'LineColor', 'k');
+clabel(C, h);  % Add labels to contours
+hold off;
+
 
 % for plotting only
 function r_out = propagate_orbit(r1, v1, tf, mu)
@@ -179,13 +220,14 @@ end
 
 
 % vis viva function
-function visviva = getVisViva(r, v, p1, p2, tf_list, mu, t_elapsed)
+function [v1, visviva] = getVisViva(r, v, p1, p2, tf_list, mu, t_elapsed)
 % r, v are the planet ephimeris
 % p1 is the planet number for the first planet (Venus - Neptune)
 % p2 is the planet number for the second planet (Venus - Neptune)
 % tf_list is an array of the flight times to check
     % iterate lambert's problem to get graphs
     visviva = zeros(length(tf_list), 2);
+    v1 = zeros(length(tf_list), 3);
     i = 1;
     for idx = 1:length(tf_list)
         tf = tf_list(idx);
@@ -198,6 +240,7 @@ function visviva = getVisViva(r, v, p1, p2, tf_list, mu, t_elapsed)
         VV1 = norm(V1 - v(1+floor(t_elapsed), idx1))^2;
         VV2 = norm(V2 - v(1+tf+floor(t_elapsed), idx2))^2;
         visviva(i, :) = [VV1 VV2];
+        v1(i, :) = V1;
         i = i + 1;
     end
 end

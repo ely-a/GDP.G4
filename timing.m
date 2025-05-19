@@ -62,7 +62,7 @@ initial_v_inf = 8.59; % km/s
 sequence = [2, 3, 4, 7]; % 1 = Venus --> 7 = Neptune
 max_lengths = [1000, 2000, 5000]; % transfer times (days)
 initial_LEO_alt = 300; %km
-final_neptune_alt = 1000; %km
+final_neptune_alt = 30000; %km
 dv_launch = sqrt(initial_v_inf^2 + 2 * mu_planets(sequence(1)) /...
     (initial_LEO_alt + r_planets(sequence(1)))) - sqrt(mu_planets(sequence(1)) /...
     (initial_LEO_alt + r_planets(sequence(1))));
