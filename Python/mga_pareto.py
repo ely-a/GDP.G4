@@ -18,7 +18,7 @@ r_leo = r_earth + leo_altitude
 
 mu_neptune = 6835100      # km^3/s^2
 r_neptune = 24622.0       # km
-neptune_orbit_alt = 40000.0  # km
+neptune_orbit_alt = 10000.0  # km
 r_neptune_orbit = r_neptune + neptune_orbit_alt
 
 # Δv to escape LEO (300 km) into hyperbolic trajectory
@@ -29,9 +29,10 @@ def delta_v_escape(vinf):  # vinf in km/s
 
 # Δv to capture into circular orbit around Neptune
 def delta_v_capture(vinf):  # vinf in km/s
-    v_circ = np.sqrt(mu_neptune / r_neptune_orbit)
+    # v_circ = np.sqrt(mu_neptune / r_neptune_orbit)
+    v_para_neptune = np.sqrt(2*mu_neptune / r_neptune_orbit)
     v_inf_entry = np.sqrt(vinf**2 + 2 * mu_neptune / r_neptune_orbit)
-    return v_inf_entry - v_circ
+    return v_inf_entry - v_para_neptune
 
 def mjd2000_to_datetime(mjd2000):
     return datetime(2000, 1, 1, 12) + timedelta(days=float(mjd2000))
