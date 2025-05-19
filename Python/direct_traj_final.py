@@ -358,7 +358,7 @@ for t, sc_pos in zip(traj_epochs, sc_positions):
     row.extend(sc_pos)  # already in km
     all_positions.append(row)
 
-with open("spacecraft_trajectory.txt", "w") as f:
+with open("spacecraft_trajectory_direct.txt", "w") as f:
     # Header
     header = "time_mjd2000"
     for name in planet_names:

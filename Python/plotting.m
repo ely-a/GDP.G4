@@ -4,7 +4,7 @@ close all
 clc
 
 % --- Load data from Python ---
-sc_data = readmatrix('spacecraft_trajectory.txt'); % skip header if present
+sc_data = readmatrix('spacecraft_trajectory_direct.txt'); % skip header if present
 
 sc_time = sc_data(:,1);
 
@@ -99,11 +99,14 @@ for i = 1:8
 end
 
 % --- Output results ---
-fprintf('\nMinimum distance from spacecraft to each planet:\n');
-for i = 1:8
-    fprintf('%s: %.3e km at epoch (MJD2000) %.2f\n', planet_names(i), min_dist(i), min_epoch(i));
-end
+% Mean planetary radii in km (Mercury to Neptune)
+planet_radii = [2439.7, 6051.8, 6371.0, 3389.5, 69911, 58232, 25362, 24622];
 
+fprintf('\nMinimum distance from spacecraft to each planet (in km and planetary radii):\n');
+for i = 1:8
+    fprintf('%s: %.3e km (%.2f planetary radii) at epoch (MJD2000) %.2f\n', ...
+        planet_names(i), min_dist(i), min_dist(i)/planet_radii(i), min_epoch(i));
+end
 % --- Plot positions at closest approach to Jupiter ---
 [~, idx_jup] = min(sqrt(sum((planet_xyz{5} - [sc_x sc_y sc_z]).^2, 2))); % Jupiter is planet 5
 epoch_jup = sc_time(idx_jup);
@@ -128,3 +131,16 @@ end
 plot3(sc_x(idx_jup), sc_y(idx_jup), sc_z(idx_jup), 'kp', 'MarkerSize', 14, 'MarkerFaceColor', 'y', 'DisplayName', 'Spacecraft');
 
 legend show;
+
+% --- Plot distance between spacecraft and each planet over time ---
+figure
+hold on;
+for i = 1:8
+    d = sqrt(sum((planet_xyz{i} - [sc_x sc_y sc_z]).^2, 2)); % distance in km
+    plot(sc_time, d, 'LineWidth', 1.5, 'Color', colors(i,:), 'DisplayName', planet_names(i));
+end
+xlabel('Epoch (MJD2000)');
+ylabel('Distance to Spacecraft (km)');
+title('Distance from Spacecraft to Each Planet Over Time');
+legend show;
+grid on;
