@@ -17,7 +17,7 @@ def main():
     tof = [
         [100, 200],
         [300, 600],
-        [500, 3500],
+        [2000, 3315],
     ]
     vinf = [6, 9.5]
 
@@ -28,7 +28,7 @@ def main():
         vinf=vinf,
         add_vinf_dep=False,
         add_vinf_arr=True,
-        tof_encoding="direct",
+        tof_encoding="direct",     
         multi_objective=False
     )
 
