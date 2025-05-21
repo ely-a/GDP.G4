@@ -4,7 +4,7 @@
 close all
 clc
 
-t_start = juliandate(2033,1,1);
+t_start = juliandate(2033,6,1);
 t_end = t_start + 2e4;
 
 % Define the list of variables to keep
@@ -59,10 +59,10 @@ mu = 1.32712e11; % for the sun
 mu_planets = [3.24859e5, 3.98600e5, 4.28284e4, 1.26687e8, 3.7912e7, 5.79394e6, 6.83653e6]; % km^3/s^2
 r_planets = [6051.8, 6378.1, 3396.2, 71492, 60268, 25559, 24764]; % km
 sequence = [2, 7]; % 1 = Venus --> 7 = Neptune
-max_lengths = 4000; % transfer times (days)
+max_lengths = 5000; % transfer times (days)
 initial_LEO_alt = 300; %km
-final_neptune_alt = 40000; %km
-max_delay = 730; % days past initial launch window
+final_neptune_alt = 10000; %km
+max_delay = 1; % days past initial launch window
 big_list = zeros(max_lengths - 9, max_delay);
 big_list_launch = zeros(max_lengths - 9, max_delay);
 big_list_capture = zeros(max_lengths - 9, max_delay);
@@ -83,9 +83,10 @@ for time_elapsed = 0:max_delay-1 % adjust to test multiple launch days
         dv_launch = sqrt(y1 + 2 * mu_planets(sequence(1)) /...
         (initial_LEO_alt + r_planets(sequence(1)))) - sqrt(mu_planets(sequence(1)) /...
         (initial_LEO_alt + r_planets(sequence(1))));
-        dv_capture = sqrt(y2 + 2 * mu_planets(sequence(end)) /...
-        (final_neptune_alt + r_planets(sequence(end)))) - sqrt(mu_planets(sequence(end)) /...
-        (final_neptune_alt + r_planets(sequence(end))));
+        r_p = final_neptune_alt + r_planets(sequence(end));     % Periapsis radius
+        v_arrival = sqrt(y2 + 2 * mu_planets(sequence(end)) / r_p);  % Hyperbolic arrival speed at periapsis
+        v_parabolic = sqrt(2 * mu_planets(sequence(end)) / r_p);     % Parabolic speed at same radius
+        dv_capture = v_arrival - v_parabolic;   % Δv to just capture (into parabolic orbit)
         dv_total = dv_launch + dv_capture;
 
         %vis-viva matching graphs
@@ -112,7 +113,8 @@ end
 % xlabel("Days to reach Neptune")
 % ylabel("dV (km/s)")
 
-[~, best_idx] = min(sum(visviva, 2));
+%[~, best_idx] = min(sum(visviva, 2));
+best_idx = 365*11+2;
 v1 = v1_list(best_idx, :);
 tf_best = tf_list(best_idx);
 
@@ -133,6 +135,90 @@ r_plot = [r_planet_interp, r_sc_traj];  % Nx(21+3)
 [nRows, nCols] = size(big_list);
 x = 1:nCols;   % Time past initial launch date (days)
 y = 1:nRows;   % Transfer time (days)
+
+function coe = orbital_elements(r1, v1, mu)
+% INPUTS:
+% r1 - position vector [km]
+% v1 - velocity vector [km/s]
+% mu - gravitational parameter [km^3/s^2]
+
+% OUTPUT:
+% coe - structure containing orbital elements:
+%       a     - semi-major axis [km]
+%       e     - eccentricity
+%       i     - inclination [deg]
+%       RAAN  - right ascension of ascending node [deg]
+%       omega - argument of periapsis [deg]
+%       theta - true anomaly [deg]
+
+% Magnitudes
+r = norm(r1);
+v = norm(v1);
+
+% Specific angular momentum
+h = cross(r1, v1);
+h_mag = norm(h);
+
+% Eccentricity vector
+e_vec = (1/mu) * ((v^2 - mu/r)*r1 - dot(r1,v1)*v1);
+e = norm(e_vec);
+
+% Semi-major axis
+energy = v^2/2 - mu/r;
+if abs(e - 1) < 1e-6
+    a = Inf;  % Parabolic (technically semi-latus rectum should be used)
+else
+    a = -mu / (2*energy);
+end
+
+% Inclination
+i = acosd(h(3)/h_mag);
+
+% Node vector
+K = [0 0 1];
+n = cross(K, h);
+n_mag = norm(n);
+
+% Right ascension of ascending node (RAAN)
+if n_mag ~= 0
+    RAAN = acosd(n(1)/n_mag);
+    if n(2) < 0
+        RAAN = 360 - RAAN;
+    end
+else
+    RAAN = 0;
+end
+
+% Argument of periapsis (omega)
+if n_mag ~= 0 && e > 1e-8
+    omega = acosd(dot(n, e_vec)/(n_mag*e));
+    if e_vec(3) < 0
+        omega = 360 - omega;
+    end
+else
+    omega = 0;
+end
+
+% True anomaly (theta)
+if e > 1e-8
+    theta = acosd(dot(e_vec, r1)/(e*r));
+    if dot(r1, v1) < 0
+        theta = 360 - theta;
+    end
+else
+    % Circular orbit
+    cp = cross(n, r1);
+    if cp(3) >= 0
+        theta = acosd(dot(n, r1)/(n_mag*r));
+    else
+        theta = 360 - acosd(dot(n, r1)/(n_mag*r));
+    end
+end
+
+% Return as structure
+coe = struct('a', a, 'e', e, 'i', i, ...
+             'RAAN', RAAN, 'omega', omega, 'theta', theta);
+end
 
 figure;
 imagesc(x, y, big_list);   % Specify x and y axes
@@ -180,7 +266,7 @@ title("Neptune capture dV")
 
 % Add contour lines
 hold on;
-levels = 0:2:30;  % Contour levels every 5 units between 0 and 50
+levels = [0:0.5:5 6:2:30];  % Contour levels every 5 units between 0 and 50
 [C, h] = contour(x, y, big_list_capture, levels, 'LineColor', 'k');
 clabel(C, h);  % Add labels to contours
 hold off;
