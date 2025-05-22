@@ -30,16 +30,35 @@ r1 = r_sc(2, :)';          % initial position (km). avoid starting inside earth!
 v1 = (r_sc(2, :) - r_sc(1, :))' / 86400;  % finite-diff estimate of velocity (km/s)
 
 % Propagation duration in days
-tf_days = 1000;
+tcm_interval = 30; % TCM once every 30 days
+time_elapsed = 0;
+dv_total = 0;
+big_rv_propagated = [r1' v1'];
 
 % Call n-body propagator
-r_propagated = propagate_orbit_nbody(r1, v1, tf_days, mu_sun, mu_planets, r_planets);
+while time_elapsed < n
+    tf_days = min(tcm_interval, n - time_elapsed - 1); % so the propagation length is not too long
+    if tf_days == 0
+        break
+    end
+    rv_propagated = propagate_orbit_nbody(r1, v1, tf_days, mu_sun, mu_planets, r_planets);
+    r1 = rv_propagated(end, 1:3);
+    v1 = rv_propagated(end, 4:6);
+    big_rv_propagated = [big_rv_propagated; rv_propagated];
+    time_elapsed = time_elapsed + tf_days;
+
+    % test
+    correction_vector = r_sc(time_elapsed) - r1; % vector in correction direction
+    dv = correction_vector / sqrt(norm(correction_vector)) * 1e-6;
+    dv_total = dv_total + norm(dv);
+    v1 = v1 + dv;
+end
 
 % Plot comparison
 figure;
-plot3(r_sc(1:tf_days+1, 1), r_sc(1:tf_days+1, 2), r_sc(1:tf_days+1, 3), 'b', 'LineWidth', 1.5);
+plot3(r_sc(1:500, 1), r_sc(1:500, 2), r_sc(1:500, 3), 'b', 'LineWidth', 1.5);
 hold on;
-plot3(r_propagated(:,1), r_propagated(:,2), r_propagated(:,3), 'r--', 'LineWidth', 1.5);
+plot3(big_rv_propagated(1:500,1), big_rv_propagated(1:500,2), big_rv_propagated(1:500,3), 'r--', 'LineWidth', 1.5);
 legend('Original r_{sc}', 'Propagated (n-body)');
 xlabel('X (km)');
 ylabel('Y (km)');
