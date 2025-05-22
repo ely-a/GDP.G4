@@ -1,5 +1,6 @@
 import pykep as pk
 import pygmo as pg
+import numpy as np
 from datetime import datetime
 from pykep.planet import jpl_lp
 from pykep.trajopt import mga_1dsm
@@ -9,17 +10,35 @@ from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plotting
 def to_mjd2000(date):
     return (date - datetime(2000, 1, 1)).days
 
+def delta_v_escape(vinf):  # vinf in km/s
+    r_earth = 6378.0
+    mu_earth = 398600.4418
+    leo_altitude = 300.0
+    r_leo = r_earth + leo_altitude
+    v_circ = np.sqrt(mu_earth / r_leo)
+    v_peri_hyp = np.sqrt(vinf**2 + 2 * mu_earth / r_leo)
+    return v_peri_hyp - v_circ
+
+def delta_v_capture(vinf):  # vinf in km/s
+    mu_neptune = 6835100
+    r_neptune = 24622.0
+    neptune_orbit_alt = 10000.0
+    r_neptune_orbit = r_neptune + neptune_orbit_alt
+    v_para_neptune = np.sqrt(2*mu_neptune / r_neptune_orbit)
+    v_inf_entry = np.sqrt(vinf**2 + 2 * mu_neptune / r_neptune_orbit)
+    print(v_inf_entry)
+    return v_inf_entry - v_para_neptune
+
 def main():
-    seq = [jpl_lp('earth'), jpl_lp('mars'), jpl_lp('jupiter'), jpl_lp('neptune')]
+    seq = [jpl_lp('earth'), jpl_lp('jupiter'), jpl_lp('neptune')]
     # seq = [jpl_lp('earth'), jpl_lp('neptune')]
     # seq = [jpl_lp('earth'), jpl_lp('mars'), jpl_lp('earth'), jpl_lp('jupiter'), jpl_lp('saturn'), jpl_lp('neptune')]
-    t0 = [to_mjd2000(datetime(2029, 5, 13)), to_mjd2000(datetime(2032, 5, 13))]
+    t0 = [to_mjd2000(datetime(2032, 3, 23)), to_mjd2000(datetime(2032, 3, 23))]
     tof = [
-        [100, 200],
-        [300, 600],
-        [2000, 3315],
+        [400, 466],  
+        [2000, 2527],
     ]
-    vinf = [6, 9.5]
+    vinf = [10, 11]
 
     udp = mga_1dsm(
         seq=seq,
@@ -45,8 +64,23 @@ def main():
     idx = sols.index(min(sols))
     x_best = archi.get_champions_x()[idx]
 
-    print("Best delta-v:", sols[idx])
+    # Compute v-infinity at departure and arrival
+    DV_vec, _, _, _, _ = udp._compute_dvs(x_best)
+    vinf_dep = np.linalg.norm([x_best[1], x_best[2], x_best[3]]) / 1000.0  # m/s to km/s
+    vinf_arr = DV_vec[-1] / 1000.0  # m/s to km/s
+    print(vinf_dep, vinf_arr)
+
+    dv1 = delta_v_escape(vinf_dep)
+    dv2 = delta_v_capture(vinf_arr)
+    dsm_dv = float(sols[idx]) / 1000.0  # m/s to km/s
+
+    total_dv = dsm_dv + dv1 + dv2 - vinf_arr
+
     udp.pretty(x_best)
+    print(f"Best delta-v (DSM only): {dsm_dv:.3f} km/s")
+    print(f"LEO escape delta-v: {dv1:.3f} km/s")
+    print(f"Neptune capture delta-v: {dv2:.3f} km/s")
+    print(f"Total mission delta-v: {total_dv:.3f} km/s")
     
     # fig = plt.figure()
     # ax = fig.add_subplot(111, projection='3d')
@@ -54,9 +88,6 @@ def main():
     # plt.show()
 
     _, _, _, ballistic_legs, ballistic_ep = udp._compute_dvs(x_best)
-
-    # Sample the trajectory at regular intervals
-    import numpy as np
 
     eph_func = udp.get_eph_function(x_best)
     departure_epoch = x_best[0]
