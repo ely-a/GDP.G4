@@ -43,10 +43,11 @@ r1 = r_sc(2, :)';          % initial position (km). avoid starting inside earth!
 v1 = (r_sc(2, :) - r_sc(1, :))' / 86400;  % finite-diff estimate of velocity (km/s)
 
 % Propagation duration in days
-tcm_interval = 30; % TCM once every 30 days
+tcm_interval = 180; % TCM once every 30 days
 time_elapsed = 0;
 dv_total = 0;
 big_rv_propagated = [r1' v1'];
+dv_list = [];
 
 % Call n-body propagator
 while time_elapsed < n
@@ -60,20 +61,28 @@ while time_elapsed < n
     big_rv_propagated = [big_rv_propagated; rv_propagated];
     time_elapsed = time_elapsed + tf_days;
 
-    % % test
+    % test
     % correction_vector = r_sc(time_elapsed, :) - r1; % vector in correction direction
-    % dv = correction_vector / sqrt(norm(correction_vector)) * 1e-5;
+    % dv = correction_vector / sqrt(norm(correction_vector)) * 1e-6;
     % dv_total = dv_total + norm(dv);
     % v1 = v1 + dv;
+
+    % lambert solver test
+    endpos = r_sc(min(n, time_elapsed + tf_days), :);
+    [V1, ~] = lambert2(r1, endpos, tf_days, 0, mu_sun);
+    dv = V1 - v1;
+    if norm(dv) < 0.1
+        dv_total = dv_total + norm(dv);
+    end
+    dv_list = [dv_list dv];
+    v1 = v1 + dv;
 end
-
-
 
 % Plot comparison
 figure;
-plot3(r_sc(1:400, 1), r_sc(1:400, 2), r_sc(1:400, 3), 'b', 'LineWidth', 1.5);
+plot3(r_sc(:, 1), r_sc(:, 2), r_sc(:, 3), 'b', 'LineWidth', 1.5);
 hold on;
-plot3(big_rv_propagated(1:400,1), big_rv_propagated(1:400,2), big_rv_propagated(1:400,3), 'r', 'LineWidth', 1.5);
+plot3(big_rv_propagated(:,1), big_rv_propagated(:,2), big_rv_propagated(:,3), 'r', 'LineWidth', 1.5);
 scatter3(big_rv_propagated(1:tcm_interval:400,1), ...
     big_rv_propagated(1:tcm_interval:400,2), ...
     big_rv_propagated(1:tcm_interval:400,3), 'g', 'LineWidth', 1.5)
@@ -154,7 +163,3 @@ function rv_out = propagate_orbit_nbody(r1, v1, tf_days, mu_sun, mu_planets, r_p
 
     rv_out = Y;
 end
-
-
-
-
