@@ -48,17 +48,20 @@ while time_elapsed < n
     time_elapsed = time_elapsed + tf_days;
 
     % test
-    correction_vector = r_sc(time_elapsed) - r1; % vector in correction direction
-    dv = correction_vector / sqrt(norm(correction_vector)) * 1e-6;
+    correction_vector = r_sc - r1; % vector in correction direction
+    dv = correction_vector / sqrt(norm(correction_vector)) * 1e-5;
     dv_total = dv_total + norm(dv);
     v1 = v1 + dv;
 end
 
 % Plot comparison
 figure;
-plot3(r_sc(1:500, 1), r_sc(1:500, 2), r_sc(1:500, 3), 'b', 'LineWidth', 1.5);
+plot3(r_sc(1:400, 1), r_sc(1:400, 2), r_sc(1:400, 3), 'b', 'LineWidth', 1.5);
 hold on;
-plot3(big_rv_propagated(1:500,1), big_rv_propagated(1:500,2), big_rv_propagated(1:500,3), 'r--', 'LineWidth', 1.5);
+plot3(big_rv_propagated(1:400,1), big_rv_propagated(1:400,2), big_rv_propagated(1:400,3), 'r', 'LineWidth', 1.5);
+scatter3(big_rv_propagated(1:tcm_interval:400,1), ...
+    big_rv_propagated(1:tcm_interval:400,2), ...
+    big_rv_propagated(1:tcm_interval:400,3), 'g', 'LineWidth', 1.5)
 legend('Original r_{sc}', 'Propagated (n-body)');
 xlabel('X (km)');
 ylabel('Y (km)');

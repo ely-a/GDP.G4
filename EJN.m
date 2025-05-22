@@ -3,7 +3,6 @@
 
 close all
 clc
-8
 t_start = juliandate(2032,3,23);
 t_end = t_start + 1e4;
 
