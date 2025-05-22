@@ -24,10 +24,10 @@ earth = jpl_lp("earth")
 neptune = jpl_lp("neptune")
 
 # --- Time grid ---
-start_date = datetime(2033, 1, 1)
-end_date = datetime(2035, 1, 1)
+start_date = datetime(2032, 5, 1)
+end_date = datetime(2032, 7, 1)
 t0_grid = np.arange(datetime_to_mjd2000(start_date), datetime_to_mjd2000(end_date), 1)  # every 5 days
-tof_grid = np.arange(2500, 4050, 1)  # TOF from 1000 to 4050 days
+tof_grid = np.arange(2800, 3500, 1)  # TOF from 1000 to 4050 days
 
 # --- Meshgrids ---
 T0, TOF = np.meshgrid(t0_grid, tof_grid)
@@ -91,11 +91,11 @@ T0_dt = np.vectorize(mjd2000_to_datetime)(T0)
 ARRIVAL_dt = np.vectorize(mjd2000_to_datetime)(ARRIVAL)
 
 # --- User constraints ---
-max_depart_dv = 9.5      # km/s, departure Δv
-max_arrival_dv = 3.0     # km/s, arrival Δv
+max_depart_dv = 10.5      # km/s, departure Δv
+max_arrival_dv = 6.0     # km/s, arrival Δv
 max_total_dv = max_depart_dv + max_arrival_dv      # km/s, total Δv
 tof_min = 0.0            # years, min TOF
-tof_max = 11.0           # years, max TOF
+tof_max = 8.2            # years, max TOF
 
 # --- Combined mask for all constraints ---
 TOF_years = TOF / 365.25
@@ -268,6 +268,21 @@ if flat_dep_dates.size > 0:
             print(f"    Total Δv:        {best_total_dv:.2f} km/s")
             print(f"    Departure Δv:    {best_depart_dv:.2f} km/s")
             print(f"    Arrival Δv:      {best_arrival_dv:.2f} km/s")
+
+            # Find and print the minimum TOF trajectory in this window
+            min_tof_idx = np.argmin(window_tof)
+            min_tof_dep = window_dep_dates[min_tof_idx]
+            min_tof_arr = window_arr_dates[min_tof_idx]
+            min_tof_total_dv = window_total_dv[min_tof_idx]
+            min_tof_depart_dv = window_depart_dv[min_tof_idx]
+            min_tof_arrival_dv = window_arrival_dv[min_tof_idx]
+            min_tof_val = window_tof[min_tof_idx]
+            print(f"  Minimum TOF departure: {min_tof_dep.strftime('%Y-%m-%d')}")
+            print(f"    Arrival:             {min_tof_arr.strftime('%Y-%m-%d')}")
+            print(f"    TOF:                 {min_tof_val:.1f} days ({min_tof_val/365.25:.2f} years)")
+            print(f"    Total Δv:            {min_tof_total_dv:.2f} km/s")
+            print(f"    Departure Δv:        {min_tof_depart_dv:.2f} km/s")
+            print(f"    Arrival Δv:          {min_tof_arrival_dv:.2f} km/s")
         else:
             print("  No valid departures in this window.")
 else:
@@ -319,6 +334,8 @@ print(f"  True anomaly:             {np.degrees(ta):.3f} deg")
 print(f"  Specific angular momentum (h): {h_mag/1e6:.6f} km²/s")
 print(f"  v-infinity at Earth:   {vinf_dep/1e3:.3f} km/s")
 print(f"  v-infinity at Neptune: {vinf_arr/1e3:.3f} km/s")
+v_entry = np.sqrt(vinf_arr**2 + 2 * MU_NEPTUNE / r_neptune_orbit)
+print(f"  v at Neptune (entry): {v_entry/1e3:.3f} km/s")
 
 # Number of points along the trajectory
 N_points = 2000
