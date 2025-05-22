@@ -1,0 +1,409 @@
+clear
+clc
+close all
+
+%% SET GRAPHING FONTS AND SIZES
+set(groot,'defaultLineLineWidth',4) % Set all line widths to 2 unless stated otherwise
+set(groot,'defaultAxesFontSize',34) % Set all axes font size to 16 unless stated otherwise
+set(groot,'defaulttextfontsize',36) % Set all text font sizes to 16 unless stated otherwise
+set(groot,'defaultLineMarkerSize',12) % Set all marker sizes to 16 unless stated otherwise
+set(groot,'defaultAxesXGrid','on') % Turn x grid lines on
+set(groot,'defaultAxesYGrid','on') % Turn y grid lines on
+
+%% Orbit around Neptune 
+
+% Neptune Orbital Trajectory Design
+% Author: Team 04 - Trajectory Design
+% Date: May 2025
+
+%% === CONSTANTS ===
+mu_N = 6.836529e15;              % Neptune gravitational parameter [m^3/s^2]
+R_N = 24622e3;                   % Neptune radius [m]
+r_triton = 354800e3;             % Triton's orbital radius [m]
+incl_triton = deg2rad(156.8);    % Triton's orbital inclination [rad]
+
+%% === FLYBY TRAJECTORY (Hyperbolic) ===
+rp_flyby = r_triton - 1000e3;          % 1000 km below Triton orbit
+e_flyby = 1.2;                         % hyperbolic eccentricity
+a_flyby = -rp_flyby / (e_flyby - 1);   % semi-major axis
+
+theta_fly = deg2rad(linspace(-100, 100, 1000));
+r_fly = a_flyby * (e_flyby^2 - 1) ./ (1 + e_flyby * cos(theta_fly));
+x_fly = r_fly .* cos(theta_fly);
+y_fly = r_fly .* sin(theta_fly);
+z_fly = zeros(size(x_fly));
+
+% Rotate to Triton's inclination
+x_fly_rot = x_fly;
+y_fly_rot = y_fly * cos(incl_triton);
+z_fly_rot = y_fly * sin(incl_triton);
+
+r_flyby_end = [x_fly_rot(end), y_fly_rot(end), z_fly_rot(end)];
+
+%% === POLAR ORBITS ===
+polar_orbits = {
+    struct('rp', R_N + 2000e3, 'ra', R_N + 2000e3, 'color', 'g'),
+    struct('rp', R_N + 2000e3, 'ra', R_N + 5000e3, 'color', [1 0.5 0]),
+    struct('rp', R_N + 2000e3, 'ra', R_N + 15000e3, 'color', [0.5 0 0.8])
+};
+
+figure('Color', 'w'); hold on;
+plot3(x_fly_rot/1e3, y_fly_rot/1e3, z_fly_rot/1e3, 'b', 'LineWidth', 1.5);
+
+for i = 1:length(polar_orbits)
+    orbit = polar_orbits{i};
+    rp = orbit.rp; ra = orbit.ra; color = orbit.color;
+    a = (rp + ra)/2;
+    e = (ra - rp)/(ra + rp);
+
+    theta = linspace(0, 2*pi, 600);
+    r = a * (1 - e^2) ./ (1 + e * cos(theta));
+    x = r .* cos(theta);
+    y = zeros(size(x));
+    z = r .* sin(theta);
+
+    plot3(x/1e3, y/1e3, z/1e3, 'Color', color, 'LineWidth', 1.5);
+
+    % Transition arc (elliptical)
+    r_end = [x(1), y(1), z(1)];
+    r1 = norm(r_flyby_end);
+    r2 = norm(r_end);
+    rp_trans = min(r1, r2);
+    ra_trans = max(r1, r2);
+    a_trans = (rp_trans + ra_trans) / 2;
+    e_trans = (ra_trans - rp_trans) / (ra_trans + rp_trans);
+
+    theta_trans = linspace(0, pi, 300);
+    r_trans = a_trans * (1 - e_trans^2) ./ (1 + e_trans * cos(theta_trans));
+
+    v1 = r_flyby_end / norm(r_flyby_end);
+    v2 = r_end / norm(r_end);
+    normal = cross(v1, v2); normal = normal / norm(normal);
+    basis_x = v1;
+    basis_y = cross(normal, basis_x);
+
+    arc_pts = zeros(3, length(theta_trans));
+    for j = 1:length(theta_trans)
+        arc_pts(:, j) = r_trans(j) * (cos(theta_trans(j)) * basis_x' + sin(theta_trans(j)) * basis_y');
+    end
+    plot3(arc_pts(1, :) / 1e3, arc_pts(2, :) / 1e3, arc_pts(3, :) / 1e3, '--', 'Color', color);
+end
+
+scatter3(0, 0, 0, 200, 'c', 'filled');
+% Plot Triton orbit for reference
+theta_triton = linspace(0, 2*pi, 500);
+x_triton = r_triton * cos(-theta_triton);
+y_triton = r_triton * sin(-theta_triton) * cos(incl_triton);
+z_triton = r_triton * sin(-theta_triton) * sin(incl_triton);
+plot3(x_triton/1e3, y_triton/1e3, z_triton/1e3, 'k--', 'LineWidth', 1.5);
+
+legend('Flyby Trajectory','Polar Orbit 1','Transfer 1','Polar Orbit 2','Transfer 2','Polar Orbit 3','Transfer 3','Neptune','Triton Orbit');
+xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
+title('Triton Flyby');
+grid on; axis equal; view(30, 25);
+
+
+
+%% MATLAB Script: Neptune Arrival → Triton Orbit → Return to Neptune Orbit
+%% === CONSTANTS ===
+mu_N = 6.836529e15;              % Neptune gravitational parameter [m^3/s^2]
+mu_triton = 1.083e12;            % Triton gravitational parameter [m^3/s^2]
+R_N = 24622e3;                   % Neptune radius [m]
+r_triton = 354800e3;             % Triton's orbital radius [m]
+incl_triton = deg2rad(156.8);    % Triton's orbital inclination [rad]
+
+%% === PHASE 0: Parabolic Arrival Trajectory ===
+rp_arrival = R_N + 200; %2000e3 %currently 200 m above neptune 
+e_arrival = 1;  % parabolic
+theta_arrival = linspace(-pi/3, pi/3, 500);  % tighter range around periapsis
+r_arrival = rp_arrival * (1 + e_arrival) ./ (1 + e_arrival * cos(theta_arrival));
+x_arrival = r_arrival .* cos(theta_arrival);
+y_arrival = zeros(size(x_arrival));
+z_arrival = r_arrival .* sin(theta_arrival);
+
+%% === PHASE 1: Neptune Orbit Capture (Highly Elliptical) ===
+rp_cap = rp_arrival;
+ra_cap = r_triton + 2000e3; %can vary but lets say closest distance to triton bring 2000 km - this turns into vector x,y,z
+a_cap = (rp_cap + ra_cap)/2;
+e_cap = (ra_cap - rp_cap)/(ra_cap + rp_cap);
+theta_cap = linspace(0, 2*pi, 600);
+r_cap = a_cap * (1 - e_cap^2) ./ (1 + e_cap * cos(theta_cap));
+x_cap = r_cap .* cos(theta_cap);
+y_cap = zeros(size(x_cap));
+z_cap = r_cap .* sin(theta_cap);
+
+%% === PHASE 2: Transfer to Triton ===
+% ra_trans = ra_cap;
+% 
+% rp_trans = -r_triton - 2000e3;
+% 
+% %rp_trans = ra_cap;
+% %ra_trans = r_triton;
+% 
+% a_trans = (rp_trans + ra_trans)/2;
+% e_trans = (ra_trans - rp_trans)/(ra_trans + rp_trans);
+% theta_trans = linspace(0, pi, 300);
+% r_trans = a_trans * (1 - e_trans^2) ./ (1 + e_trans * cos(theta_trans));
+% x_trans = r_trans .* cos(theta_trans);
+% y_trans = zeros(size(x_trans));
+% z_trans = r_trans .* sin(theta_trans);
+
+%% === PHASE 3: Orbit Around Triton (One Revolution) ===
+% mu_T = 1.083e12;  % Triton gravity [m^3/s^2] 1.43405?? 
+% rp_triton_orb = 1000e3;
+% ra_triton_orb = 5000e3;
+% a_triton_orb = (rp_triton_orb + ra_triton_orb)/2;
+% e_triton_orb = (ra_triton_orb - rp_triton_orb)/(ra_triton_orb + rp_triton_orb);
+% theta_triton_orb = linspace(0, 2*pi, 500);
+% r_triton_orb = a_triton_orb * (1 - e_triton_orb^2) ./ (1 + e_triton_orb * cos(theta_triton_orb));
+% x_triton_orb = r_triton_orb .* cos(theta_triton_orb);
+% y_triton_orb = r_triton_orb .* sin(theta_triton_orb) * cos(incl_triton);
+% z_triton_orb = r_triton_orb .* sin(theta_triton_orb) * sin(incl_triton);
+% x_triton_orb = x_triton_orb + r_triton;
+
+%% === PHASE 4: Return Transfer from Triton to Final Polar Orbit ===
+% rp_return = r_triton;
+% ra_return = R_N + 6000e3;
+% a_return = (rp_return + ra_return)/2;
+% e_return = (ra_return - rp_return)/(ra_return + rp_return);
+% theta_return = linspace(0, pi, 300);
+% r_return = a_return * (1 - e_return^2) ./ (1 + e_return * cos(theta_return));
+% x_return = r_return .* cos(theta_return);
+% y_return = zeros(size(x_return));
+% z_return = r_return .* sin(theta_return);
+
+%% === PHASE 5: Final Polar Elliptical Orbit Around Neptune ===
+rp_final = R_N + 200; %was 1000e3
+ra_final = R_N + 50000e3; %was 6000e3
+a_final = (rp_final + ra_final)/2;
+e_final = (ra_final - rp_final)/(ra_final + rp_final);
+theta_final = linspace(0, 2*pi, 600);
+r_final = a_final * (1 - e_final^2) ./ (1 + e_final * cos(theta_final));
+x_final = r_final .* cos(theta_final);
+y_final = zeros(size(x_final));
+z_final = r_final .* sin(theta_final);  % polar orbit (in X-Z plane)
+
+%% === TRITON ORBIT ===
+theta_triton = linspace(0, 2*pi, 500);
+x_triton = r_triton * cos(-theta_triton);
+y_triton = r_triton * sin(-theta_triton) * cos(incl_triton);
+z_triton = r_triton * sin(-theta_triton) * sin(incl_triton);
+
+%% === DELTA-V CALCULATIONS ===
+% Gravitational parameter of Neptune
+mu = mu_N;
+
+% 1. From parabolic arrival to elliptical capture (at periapsis)
+v_parabolic = sqrt(2 * mu_N / rp_arrival);
+h_cap = sqrt(rp_cap * mu_N * (1 + e_cap));
+vp_capture = h_cap / rp_cap;
+%v_capture = sqrt(mu_N * (2/rp_cap - 1/a_cap));
+dv_capture = abs(v_parabolic - vp_capture);
+
+% Flyby at Triton 
+v_triton = sqrt(mu_N/r_triton);
+v_spc = h_cap / ra_cap;
+vinf = v_triton - v_spc;  % Assumed flyby vinf
+turn_angle = 2.3652;
+
+v_after = sqrt(vinf^2 + v_triton^2);
+h_flyby = v_after * r_triton;
+v_p_fromtriton = h_flyby / rp_arrival;
+
+vabeforeflyby = h_cap / (ra_cap)
+
+% ΔV equivalent effect of gravity assist:
+delta_v_flyby = 2 * vinf * sin(turn_angle / 2) %check this 
+v_p_fromtriton = abs(vabeforeflyby - delta_v_flyby) %this is meant to be va before flyby not vp_capture, also - or +????
+
+% 2. From capture orbit to Triton transfer (at apoapsis of capture)
+%v1 = sqrt(mu_N * (2/ra_cap - 1/a_cap));
+%v2 = sqrt(mu_N * (2/ra_cap - 1/a_trans));
+%dv_transfer_to_triton = abs(v1 - v2);
+
+% 3. From Triton transfer to return to Neptune (assumed symmetrical)
+%v3 = sqrt(mu * (2/rp_return - 1/a_return));
+%v4 = sqrt(mu * (2/rp_return - 1/a_final));
+%dv_return_from_triton = abs(v3 - v4);
+
+% 5. From capture orbit to polar orbit 
+h_final = sqrt(rp_arrival * mu_N * (1 + e_final));
+v4 = h_final/rp_arrival;
+dv_return = abs(v_p_fromtriton - v4);
+
+% Display delta-Vs
+fprintf('ΔV for capture at Neptune: %.2f km/s', dv_capture/1000);
+%fprintf('ΔV for transfer to Triton: %.2f m/s', dv_transfer_to_triton);
+%fprintf('ΔV for return from Triton to polar orbit: %.2f m/s', dv_return_from_triton);
+fprintf('     ΔV for return to Neptune in polar orbit: %.2f km/s', dv_return/1000);
+fprintf('     ΔV Total: %.2f km/s', (dv_return + dv_capture)/1000);
+
+%% === PLOTTING ===
+figure('Color','w'); hold on;
+plot3(x_arrival/1e3, y_arrival/1e3, z_arrival/1e3, 'c--', 'LineWidth', 1.2);
+plot3(x_cap/1e3, y_cap/1e3, z_cap/1e3, 'b', 'LineWidth', 1.5);
+%plot3(x_trans/1e3, y_trans/1e3, z_trans/1e3, 'm--', 'LineWidth', 1.5);
+%plot3(x_triton_orb/1e3, y_triton_orb/1e3, z_triton_orb/1e3, 'g', 'LineWidth', 1.5);
+plot3(x_triton/1e3, y_triton/1e3, z_triton/1e3, 'k--', 'LineWidth', 1.2);
+%plot3(x_return/1e3, y_return/1e3, z_return/1e3, 'y--', 'LineWidth', 1.5);
+plot3(x_final/1e3, y_final/1e3, z_final/1e3, 'r--', 'LineWidth', 1.5);
+scatter3(0, 0, 0, 200, 'c', 'filled');
+
+legend('Parabolic Arrival','Neptune Capture Orbit','Triton Orbit','Final Polar Orbit','Neptune');
+xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
+title('Neptune Capture → Triton Orbit → Return to Polar Neptune Orbit');
+grid on; axis equal; view(30, 25);
+
+
+
+
+%% Time Calculations
+
+% Transfer time from Neptune to Triton 
+
+P_phase1 = 2 * 3.14 * a_cap ^ (3/2) / sqrt(mu_N);
+t_phase1 = P_phase1/2; 
+
+% ADD THIS TO THE START OF LAUNCH DATE TO OBTAIN THE VECTORS FOR TRITON 
+
+%%
+
+
+r_triton = [-3.5481e8; 1.549e7; 1.243e6];     % meters
+v_triton = [-52.3; -4379.2; -2.78];          % m/s
+
+compute_total_dv_from_triton_vectors(r_triton, v_triton);
+%
+
+function total_dv = compute_total_dv_from_triton_vectors(r_Triton_vec, v_Triton_vec)
+% r_Triton_vec: 3x1 vector [m] of Triton position relative to Neptune
+% v_Triton_vec: 3x1 vector [m/s] of Triton velocity relative to Neptune
+
+% === CONSTANTS ===
+    mu_N = 6.8365e15;          % Neptune gravitational parameter [m^3/s^2]
+    R_N = 24622e3;             % Neptune radius [m]
+    r_triton = 354800e3;
+
+    % Initial parabolic arrival periapsis (altitude above Neptune)
+    rp_arrival = R_N + 200;  % 200 m above neptune 
+
+    % Post-capture orbit (highly elliptical)
+    ra_cap = norm(r_Triton_vec) + 2000e3;
+    rp_cap = rp_arrival;
+    a_cap = (rp_cap + ra_cap) / 2;
+    e_cap = (ra_cap - rp_cap) / (ra_cap + rp_cap);
+
+ % === PHASE 1: CAPTURE DELTA-V ===
+    v_parabolic = sqrt(2 * mu_N / rp_cap);
+    h_cap = sqrt(mu_N * rp_cap * (1 + e_cap));
+    vp_capture = h_cap / rp_cap;
+    dv_capture = abs(v_parabolic - vp_capture);
+
+ % === PHASE 2: FLYBY AT TRITON ===
+    % Spacecraft velocity at Triton distance from Neptune
+    r_hat = r_Triton_vec / norm(r_Triton_vec);
+    v_sc_mag = sqrt(mu_N * (2 / norm(r_Triton_vec) - 1 / a_cap));
+    v_sc_vec = v_sc_mag * r_hat
+
+    % Relative hyperbolic excess velocity
+    vinf_vec = v_sc_vec - v_Triton_vec;
+    vinf_mag = norm(vinf_vec);
+    vinf_hat = vinf_vec / vinf_mag;
+
+    % Assume 90° turn angle flyby FOR NOW- will change 
+    turn_angle = pi / 2;
+    
+
+    % Calculating the turn angle flyby 
+    rp_final = R_N + 200; % 200 m above 
+    % Hyperbolic eccentricity:
+e_hyper = 1 + (rp_final * vinf_mag^2) / mu_N;
+    ra_finaltrans = r_triton;
+    e_finaltrans = (ra_finaltrans - rp_final)/(ra_finaltrans + rp_final);
+    delta_fin = 2 * asin(1/e_hyper);
+    deltadeg_fin = delta_fin * 180 / 3.14; 
+    
+    %delta_fin = pi/2;
+    delta_v_flyby = 2 * vinf_mag * sin(delta_fin / 2)
+
+    % Velocity after flyby
+    v_after_flyby_mag = abs(norm(v_sc_vec) - delta_v_flyby);
+
+    % CALC v at perigee 
+    h_back = sqrt(rp_final * mu_N * (1 + e_finaltrans))
+    vp_return = h_back / rp_final
+    
+    v_after_mag = v_after_flyby_mag           % magnitude of velocity after flyby
+    r_flyby = norm(r_Triton_vec);              % distance from Neptune at flyby
+    epsilon_return = v_after_mag^2 / 2 - mu_N / r_flyby;
+    a_return = -mu_N / (2 * epsilon_return);   % semi-major axis of return orbit
+    vp_return = sqrt(mu_N * (2 / rp_arrival - 1 / a_return));
+
+
+% Step 1: Unit vector of v_infinity
+vinf_hat = vinf_vec / norm(vinf_vec);
+
+% Step 2: Rotation axis: normal to the plane of flyby (r × vinf)
+r_hat = r_Triton_vec / norm(r_Triton_vec);
+n_hat = cross(r_hat, vinf_hat);
+n_hat = n_hat / norm(n_hat);  % ensure unit vector
+
+% Step 4: Rotate vinf vector using Rodrigues' formula
+v_rotated = vinf_mag * ( ...
+    vinf_hat * cos(delta_fin) + ...
+    cross(n_hat, vinf_hat) * sin(delta_fin) ...
+    );
+
+% Step 5: Add back Triton’s velocity to get full outgoing velocity vector
+v_after_vec = v_Triton_vec + v_rotated;
+
+  
+
+    % Velocity at final perigee Calculation 
+
+ % r_hat = r_Triton_vec / norm(r_Triton_vec);
+ % v_rot_dir = cross(r_hat, vinf_hat);
+ % v_rot_dir = v_rot_dir / norm(v_rot_dir);
+
+% Turned velocity vector (90° rotation of vinf)
+% v_after_vec = v_Triton_vec + vinf_mag * v_rot_dir;
+
+% Decompose
+v_r = dot(v_after_vec, r_hat);
+v_perp_vec = v_after_vec - v_r * r_hat;
+v_perp = norm(v_perp_vec);
+
+% Angular momentum and eccentricity
+r_flyby = norm(r_Triton_vec);
+h_return = v_perp * r_flyby;
+epsilon_return = norm(v_after_vec)^2 / 2 - mu_N / r_flyby;
+a_return = -mu_N / (2 * epsilon_return);
+e_return = sqrt(1 - h_return^2 / (mu_N * a_return));
+
+% Final perigee speed
+rp_return = rp_arrival;
+%vp_return = sqrt(mu_N * (2 / rp_return - 1 / a_return));
+
+
+ % === PHASE 3: FINAL POLAR ORBIT AROUND NEPTUNE ===
+    %rp_final = R_N + 500e3;
+    ra_final = R_N + 6000e3;
+    a_final = (rp_final + ra_final) / 2;
+    e_final = (ra_final - rp_final) / (ra_final + rp_final);
+    h_final = sqrt(mu_N * rp_final * (1 + e_final));
+    vp_final = h_final / rp_final
+
+    dv_return = abs(vp_return - vp_final)
+
+ % === TOTAL DELTA-V ===
+    total_dv = dv_capture + dv_return;
+
+ % === OUTPUT ===
+    fprintf('\n--- DELTA-V ---\n');
+    fprintf('Capture ΔV:       %.2f m/s\n', dv_capture);
+    fprintf('Triton Flyby ΔV:  %.2f m/s\n', delta_v_flyby);
+    fprintf('Return ΔV:        %.2f m/s\n', dv_return);
+    fprintf('TOTAL ΔV:         %.2f m/s\n', total_dv);
+    fprintf('-----------------------\n');
+
+end
