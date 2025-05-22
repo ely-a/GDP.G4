@@ -42,13 +42,13 @@ while time_elapsed < n
         break
     end
     rv_propagated = propagate_orbit_nbody(r1, v1, tf_days, mu_sun, mu_planets, r_planets);
-    r1 = rv_propagated(end, 1:3);
-    v1 = rv_propagated(end, 4:6);
+    r1 = rv_propagated(end, end);
+    v1 = rv_propagated(1:4, end);
     big_rv_propagated = [big_rv_propagated; rv_propagated];
     time_elapsed = time_elapsed + tf_days;
 
     % test
-    correction_vector = r_sc(time_elapsed, :) - r1; % vector in correction direction
+    correction_vector = r_sc - r1; % vector in correction direction
     dv = correction_vector / sqrt(norm(correction_vector)) * 1e-5;
     dv_total = dv_total + norm(dv);
     v1 = v1 + dv;
