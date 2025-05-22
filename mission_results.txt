@@ -1,0 +1,92 @@
+
+Mission Results to Neptunian Orbit (Gravity Assist + N₂O₄):
+------------------------------------------------------------
+Ariane6
+  Structural Mass (kg): 3247.50
+  Propellant Mass (kg): 18326.64
+  Delivered Payload (kg): 75.86
+
+FalconHeavy
+  Structural Mass (kg): 7500.00
+  Propellant Mass (kg): 42324.80
+  Delivered Payload (kg): 175.20
+
+Starship
+  Structural Mass (kg): 15000.00
+  Propellant Mass (kg): 84649.59
+  Delivered Payload (kg): 350.41
+
+Atlas5
+  Structural Mass (kg): 2827.50
+  Propellant Mass (kg): 15956.45
+  Delivered Payload (kg): 66.05
+
+
+Mission Results to Neptunian Orbit (Gravity Assist + EP):
+------------------------------------------------------------
+Ariane6
+  Structural Mass (kg): 3247.50
+  Propellant Mass (kg): 17358.40
+  Delivered Payload (kg): 1044.10
+
+FalconHeavy
+  Structural Mass (kg): 7500.00
+  Propellant Mass (kg): 40088.69
+  Delivered Payload (kg): 2411.31
+
+Starship
+  Structural Mass (kg): 15000.00
+  Propellant Mass (kg): 80177.37
+  Delivered Payload (kg): 4822.63
+
+Atlas5
+  Structural Mass (kg): 2827.50
+  Propellant Mass (kg): 15113.43
+  Delivered Payload (kg): 909.07
+
+
+Mission Results to Neptunian Orbit (Direct + N₂O₄):
+------------------------------------------------------------
+Ariane6
+  Structural Mass (kg): 3247.50
+  Propellant Mass (kg): 18148.90
+  Delivered Payload (kg): 253.60
+
+FalconHeavy
+  Structural Mass (kg): 7500.00
+  Propellant Mass (kg): 41914.31
+  Delivered Payload (kg): 585.69
+
+Starship
+  Structural Mass (kg): 15000.00
+  Propellant Mass (kg): 83828.62
+  Delivered Payload (kg): 1171.38
+
+Atlas5
+  Structural Mass (kg): 2827.50
+  Propellant Mass (kg): 15801.70
+  Delivered Payload (kg): 220.80
+
+
+Mission Results to Neptunian Orbit (Direct + EP):
+------------------------------------------------------------
+Ariane6
+  Structural Mass (kg): 3247.50
+  Propellant Mass (kg): 16095.39
+  Delivered Payload (kg): 2307.11
+
+FalconHeavy
+  Structural Mass (kg): 7500.00
+  Propellant Mass (kg): 37171.80
+  Delivered Payload (kg): 5328.20
+
+Starship
+  Structural Mass (kg): 15000.00
+  Propellant Mass (kg): 74343.60
+  Delivered Payload (kg): 10656.40
+
+Atlas5
+  Structural Mass (kg): 2827.50
+  Propellant Mass (kg): 14013.77
+  Delivered Payload (kg): 2008.73
+
