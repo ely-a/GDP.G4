@@ -1,7 +1,3 @@
-clc 
-clear
-close all
-
 % Perturbations considered
 % 1) All bodies
 % 2) Solar radiation
