@@ -24,7 +24,7 @@ r_planets = r_planets(1:n, :);
 vec1 = r_sc(465, :) - r_sc(464, :);
 vec2 = r_sc(467, :) - r_sc(466, :);
 x_vector = (vec1 + vec2) / norm(vec1 + vec2) * x;
-r_planets(:, 10:12) = r_planets(:, 10:12) - x_vector;
+r_planets()
 
 % constants
 mu = 1.32712e11; % for the sun
@@ -82,7 +82,9 @@ while time_elapsed < n
     endpos = r_sc(min(n, time_elapsed + tf_days), :);
     [V1, ~] = lambert2(r1, endpos, tf_days, 0, mu_sun);
     dv = V1 - v1;
-    dv_total = dv_total + norm(dv);
+    if norm(dv) < 0.1
+        dv_total = dv_total + norm(dv);
+    end
     dv_list = [dv_list dv];
     v1 = v1 + dv;
 end
@@ -103,9 +105,6 @@ grid on;
 axis equal;
 title('Spacecraft Orbit Propagation (N-body vs Original)');
 set(gca, 'Clipping', 'off');
-
-figure
-plot(1:300, dv_list)
 
 % =========================================================================
 
