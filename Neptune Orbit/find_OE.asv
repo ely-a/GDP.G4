@@ -1,0 +1,30 @@
+%% Find Orbital elements from r and v 
+
+function [a, e_mag, h_mag, i, Omega, omega, theta] = find_OE(r, v, mu)
+    r_mag = vecnorm(r);
+    v_mag = vecnorm(v);
+
+    h = cross(r, v);
+    h_mag = vecnorm(h);
+
+    a = mu/(2*(mu/r_mag) - v_mag*v_mag);
+
+    e = 1/mu * (cross(v,h) - mu*r/r_mag);
+    e_mag = vecnorm(e);
+
+    i = acosd(h(3)/h_mag);
+
+    N = cross([0;0;1], h);
+    N_mag = vecnorm(N);
+    Omega = acosd(N(1)/N_mag);
+    if N(2) < 0 
+        Omega = 360 - Omega;
+    end
+
+    omega = acosd(dot(N, e)/(N_mag * e_mag));
+    if e(3) < 0
+        omega = 360 - omega;
+    end
+
+    theta = acosd(dot(r, e))
+end
