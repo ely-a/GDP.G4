@@ -2,6 +2,7 @@ function load_moon_data()
     folder = 'Ephemerides';
     files = dir(fullfile(folder, '*.txt'));
     orbits = {};
+    velocities = {};
     moon_names = {};
     times_all = {};
     max_len = 0;
@@ -19,29 +20,34 @@ function load_moon_data()
         end
 
         % Read ephemeris lines
-        data = [];
-        times = {};
+        pos_data = [];
+        vel_data = [];
+        times = [];
         while ~feof(fid)
             line = fgetl(fid);
             if contains(line, '$$EOE')
                 break;
             end
             parts = split(line, ',');
-            if numel(parts) >= 5
+            if numel(parts) >= 8
                 xyz = str2double(parts(3:5));
-                if all(~isnan(xyz))
-                    data = [data; xyz']; %#ok<AGROW>
-                    times{end+1} = strtrim(parts{1}); %#ok<AGROW>  % Save the timestamp string
+                vxyz = str2double(parts(6:8));
+                t = str2double(strtrim(parts{1})); % Assume timestamp is in JD
+                if all(~isnan(xyz)) && all(~isnan(vxyz)) && ~isnan(t)
+                    pos_data = [pos_data; xyz']; %#ok<AGROW>
+                    vel_data = [vel_data; vxyz']; %#ok<AGROW>
+                    times = [times; t]; %#ok<AGROW>
                 end
             end
         end
         fclose(fid);
 
-        if ~isempty(data)
-            orbits{end+1} = data;
+        if ~isempty(pos_data)
+            orbits{end+1} = pos_data;
+            velocities{end+1} = vel_data;
             moon_names{end+1} = erase(files(k).name, '.txt');
             times_all{end+1} = times;
-            max_len = max(max_len, size(data,1));
+            max_len = max(max_len, size(pos_data,1));
         end
     end
 
@@ -49,13 +55,14 @@ function load_moon_data()
     for i = 1:length(orbits)
         n = size(orbits{i}, 1);
         if n < max_len
-            pad = repmat(orbits{i}(end, :), max_len - n, 1);
-            orbits{i} = [orbits{i}; pad];
-            times_all{i}(end+1:max_len) = repmat(times_all{i}(end), 1, max_len - n);
+            orbits{i}(end+1:max_len, :) = repmat(orbits{i}(end, :), max_len - n, 1);
+            velocities{i}(end+1:max_len, :) = repmat(velocities{i}(end, :), max_len - n, 1);
+            times_all{i}(end+1:max_len, 1) = repmat(times_all{i}(end), max_len - n, 1);
         end
     end
 
     orbits_mat = cat(3, orbits{:});
-    save('moon_orbits.mat', 'orbits_mat', 'moon_names', 'max_len', 'times_all');
+    velocities_mat = cat(3, velocities{:});
+    save('moon_orbits.mat', 'orbits_mat', 'velocities_mat', 'moon_names', 'max_len', 'times_all');
     disp('Saved moon_orbits.mat');
 end
