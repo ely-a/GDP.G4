@@ -2,9 +2,18 @@
 
 close all
 clc
+clear
 
-% --- Load data from Python ---
-sc_data = readmatrix('spacecraft_trajectory_direct.txt'); % skip header if present
+%% SET GRAPHING FONTS AND SIZES
+set(groot,'defaultLineLineWidth',2) % Set all line widths to 2 unless stated otherwise
+set(groot,'defaultAxesFontSize',16) % Set all axes font size to 16 unless stated otherwise
+set(groot,'defaulttextfontsize',16) % Set all text font sizes to 16 unless stated otherwise
+set(groot,'defaultLineMarkerSize',10) % Set all marker sizes to 16 unless stated otherwise
+set(groot,'defaultAxesXGrid','on') % Turn x grid lines on
+set(groot,'defaultAxesYGrid','on') % Turn y grid lines on
+
+%% --- Load data from Python ---
+sc_data = readmatrix('spacecraft_trajectory_mga.txt'); % skip header if present
 
 sc_time = sc_data(:,1);
 
@@ -40,7 +49,6 @@ grid on;
 xlabel('X (km)');
 ylabel('Y (km)');
 zlabel('Z (km)');
-title('Spacecraft Trajectory and Planet Orbits');
 
 % Plot full planet orbits (for the whole time span)
 for i = 1:length(planet_names)
@@ -107,30 +115,6 @@ for i = 1:8
     fprintf('%s: %.3e km (%.2f planetary radii) at epoch (MJD2000) %.2f\n', ...
         planet_names(i), min_dist(i), min_dist(i)/planet_radii(i), min_epoch(i));
 end
-% --- Plot positions at closest approach to Jupiter ---
-[~, idx_jup] = min(sqrt(sum((planet_xyz{5} - [sc_x sc_y sc_z]).^2, 2))); % Jupiter is planet 5
-epoch_jup = sc_time(idx_jup);
-
-figure;
-hold on;
-axis equal;
-grid on;
-xlabel('X (km)');
-ylabel('Y (km)');
-zlabel('Z (km)');
-title(sprintf('Positions at Closest Approach to Jupiter (MJD2000 = %.2f)', epoch_jup));
-
-% Plot all planets at this epoch
-for i = 1:length(planet_names)
-    plot3(planet_xyz{i}(idx_jup,1), planet_xyz{i}(idx_jup,2), planet_xyz{i}(idx_jup,3), 'o', ...
-        'MarkerSize', 10, 'MarkerFaceColor', colors(i,:), 'MarkerEdgeColor', 'k', ...
-        'DisplayName', planet_names(i));
-end
-
-% Plot spacecraft at this epoch
-plot3(sc_x(idx_jup), sc_y(idx_jup), sc_z(idx_jup), 'kp', 'MarkerSize', 14, 'MarkerFaceColor', 'y', 'DisplayName', 'Spacecraft');
-
-legend show;
 
 % --- Plot distance between spacecraft and each planet over time ---
 figure
@@ -141,6 +125,16 @@ for i = 1:8
 end
 xlabel('Epoch (MJD2000)');
 ylabel('Distance to Spacecraft (km)');
-title('Distance from Spacecraft to Each Planet Over Time');
 legend show;
 grid on;
+
+% --- Save distances to .mat file ---
+distances = zeros(length(sc_time), 8);
+for i = 1:8
+    distances(:,i) = sqrt(sum((planet_xyz{i} - [sc_x sc_y sc_z]).^2, 2));
+end
+
+epochs = sc_time; % MJD2000
+
+save('spacecraft_planet_distances.mat', 'epochs', 'distances');
+fprintf('Saved spacecraft-planet distances to spacecraft_planet_distances.mat\n');

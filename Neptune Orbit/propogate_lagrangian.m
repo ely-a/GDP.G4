@@ -1,7 +1,7 @@
-function [r, v] = propogate_lagrangian(r0, v0, mu, delta_t)
+function [r, v] = propogate_lagrangian(r0, v0, mu, delta_theta)
     
     [~, e, h, ~, ~, ~, theta] = find_OE(r0, v0, mu);
-    delta_theta = kepler_eqn(r0, v0, delta_t, mu);
+    % delta_theta = kepler_eqn(r0, v0, delta_t, mu);
 
     p = h^2/mu;
     theta2 = theta + delta_theta;
@@ -18,4 +18,13 @@ function [r, v] = propogate_lagrangian(r0, v0, mu, delta_t)
     f_dot = (f * g_dot - 1) / g;
     
     v = f_dot * r0 + g_dot * v0;
+    f
+    g
+    f_dot
+    g_dot
+
+    if ~isreal(r) || ~isreal(v) || any(isnan(r)) || any(isnan(v))
+        error("Complex or NaN value at theta = %.2f", theta2);
+    end
+
 end

@@ -381,120 +381,120 @@ v_triton = [-52.3e-3; -4379.2e-3; -2.78e-3];
 [total_dv, a_return, e_return, h_return] = DV_calc(r_triton, v_triton);
 
 
-% === CONSTANTS ===
-mu_N = 6.8365e6;           % Neptune gravitational parameter [km^3/s^2]
-R_N = 24760;               % Neptune radius [km]
-R_Triton = 1353.4;         % Triton radius [km]
-r_Triton_orbit = 354800;   % Circular orbital radius of Triton [km]
-incl_elliptical = 30;      % Elliptical orbit inclination [deg]
-incl_polar = 90;           % Final polar orbit inclination [deg]
-incl_triton = 23;          % Triton orbital inclination [deg]
-
-% === RESOLUTION ===
-n_elliptical = 300;
-n_flyby = 50;
-n_polar = 300;
-n_total = n_elliptical + n_flyby + n_polar;
-
-% === ELLIPTICAL ORBIT ===
-rp_ell = R_N + 2000;
-ra_ell = r_Triton_orbit + 10000;
-a_ell = (rp_ell + ra_ell)/2;
-e_ell = (ra_ell - rp_ell)/(ra_ell + rp_ell);
-
-% === POLAR ORBIT ===
-rp_polar = R_N + 2000;
-ra_polar = R_N + 120000;
-a_polar = (rp_polar + ra_polar)/2;
-e_polar = (ra_polar - rp_polar)/(ra_polar + rp_polar);
-
-% === Vis-Viva Spacing ===
-visviva_spacing = @(a,e,mu,N) ...
-    interp1(cumsum(1 ./ sqrt(mu * (2 ./ (a * (1 - e^2) ./ (1 + e * cos(linspace(0,2*pi,1000))) - 1 ./ a))), 'linear', 'extrap'), ...
-            linspace(0,1,N), ...
-            linspace(0,2*pi,1000));
-
-theta_ell = visviva_spacing(a_ell, e_ell, mu_N, n_elliptical);
-theta_polar = visviva_spacing(a_polar, e_polar, mu_N, n_polar);
-theta_Triton = linspace(0, 2*pi, n_total);
-
-% === Orbit Coordinates ===
-orbit_coords = @(a,e,theta,inc) [ ...
-    a*(1 - e^2)./(1 + e*cos(theta)) .* cos(theta); ...
-    a*(1 - e^2)./(1 + e*cos(theta)) .* sin(theta); ...
-    a*(1 - e^2)./(1 + e*cos(theta)) .* sin(theta)*sind(inc)];
-
-orbit_ell = orbit_coords(a_ell, e_ell, theta_ell, incl_elliptical);
-orbit_polar = orbit_coords(a_polar, e_polar, theta_polar, incl_polar);
-triton_path = orbit_coords(r_Triton_orbit, 0, theta_Triton, incl_triton);
-
-% === FLYBY ARC ===
-flyby_start = orbit_ell(:, end);
-flyby_end = orbit_polar(:, 1);
-t_fly = linspace(0, 1, n_flyby);
-flyby_mid = (flyby_start + flyby_end)/2 + [0; 0; 8000];  % bump up
-flyby_arc = (1 - t_fly).^2 .* flyby_start + ...
-            2 * (1 - t_fly) .* t_fly .* flyby_mid + ...
-            t_fly.^2 .* flyby_end;
-
-% === FULL TRAJECTORY ===
-trajectory = [orbit_ell, flyby_arc, orbit_polar];
-
-% === SETUP PLOT ===
-figure;
-hold on; grid on; axis equal;
-xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
-title('3D Neptune Flyby with Polar Capture');
-
-% === Neptune ===
-[sx, sy, sz] = sphere(40);
-surf(R_N*sx, R_N*sy, R_N*sz, 'FaceColor', 'cyan', 'EdgeColor', 'none', 'FaceAlpha', 0.3);
-plot3(0, 0, 0, 'bo', 'MarkerFaceColor', 'blue', 'DisplayName', 'Neptune');
-
-% === Orbits ===
-plot3(orbit_ell(1,:), orbit_ell(2,:), orbit_ell(3,:), 'b--', 'DisplayName', 'Elliptical Orbit');
-plot3(flyby_arc(1,:), flyby_arc(2,:), flyby_arc(3,:), 'm-', 'LineWidth', 1.5, 'DisplayName', 'Flyby Arc');
-plot3(orbit_polar(1,:), orbit_polar(2,:), orbit_polar(3,:), 'g--', 'DisplayName', 'Polar Orbit');
-plot3(triton_path(1,:), triton_path(2,:), triton_path(3,:), 'k--', 'LineWidth', 1.2, 'DisplayName', 'Triton Orbit');
-
-% === Spacecraft marker and trail ===
-sc = plot3(trajectory(1,1), trajectory(2,1), trajectory(3,1), ...
-    'ro', 'MarkerFaceColor', 'r', 'MarkerSize', 6, 'DisplayName', 'Spacecraft');
-trail = plot3(NaN, NaN, NaN, 'r-', 'LineWidth', 2.5, 'DisplayName', 'Trajectory Trail');
-
-% === Triton Sphere (scaled up) ===
-[u, v] = meshgrid(linspace(0, 2*pi, 30), linspace(0, pi, 20));
-xT = R_Triton*2.5 * cos(u) .* sin(v);
-yT = R_Triton*2.5 * sin(u) .* sin(v);
-zT = R_Triton*2.5 * cos(v);
-Triton = surf(xT + triton_path(1,1), ...
-              yT + triton_path(2,1), ...
-              zT + triton_path(3,1), ...
-              'FaceColor', 'orange', 'EdgeColor', 'black', ...
-              'LineWidth', 0.5, 'FaceAlpha', 1, 'DisplayName', 'Triton');
-
-legend;
-view(45, 25);
-xlim([-4e5, 2e5]); ylim([-3e5, 3e5]); zlim([-2.5e5, 2.5e5]);
-
-% === ANIMATION LOOP ===
-for i = 1:n_total
-    % Spacecraft update
-    sc.XData = trajectory(1,i);
-    sc.YData = trajectory(2,i);
-    sc.ZData = trajectory(3,i);
-
-    trail.XData = trajectory(1,1:i);
-    trail.YData = trajectory(2,1:i);
-    trail.ZData = trajectory(3,1:i);
-
-    % Triton update
-    Triton.XData = xT + triton_path(1,i);
-    Triton.YData = yT + triton_path(2,i);
-    Triton.ZData = zT + triton_path(3,i);
-
-    drawnow;
-end
+% % === CONSTANTS ===
+% mu_N = 6.8365e6;           % Neptune gravitational parameter [km^3/s^2]
+% R_N = 24760;               % Neptune radius [km]
+% R_Triton = 1353.4;         % Triton radius [km]
+% r_Triton_orbit = 354800;   % Circular orbital radius of Triton [km]
+% incl_elliptical = 30;      % Elliptical orbit inclination [deg]
+% incl_polar = 90;           % Final polar orbit inclination [deg]
+% incl_triton = 23;          % Triton orbital inclination [deg]
+% 
+% % === RESOLUTION ===
+% n_elliptical = 300;
+% n_flyby = 50;
+% n_polar = 300;
+% n_total = n_elliptical + n_flyby + n_polar;
+% 
+% % === ELLIPTICAL ORBIT ===
+% rp_ell = R_N + 2000;
+% ra_ell = r_Triton_orbit + 10000;
+% a_ell = (rp_ell + ra_ell)/2;
+% e_ell = (ra_ell - rp_ell)/(ra_ell + rp_ell);
+% 
+% % === POLAR ORBIT ===
+% rp_polar = R_N + 2000;
+% ra_polar = R_N + 120000;
+% a_polar = (rp_polar + ra_polar)/2;
+% e_polar = (ra_polar - rp_polar)/(ra_polar + rp_polar);
+% 
+% % === Vis-Viva Spacing ===
+% visviva_spacing = @(a,e,mu,N) ...
+%     interp1(cumsum(1 ./ sqrt(mu * (2 ./ (a * (1 - e^2) ./ (1 + e * cos(linspace(0,2*pi,1000))) - 1 ./ a))), 'linear', 'extrap'), ...
+%             linspace(0,1,N), ...
+%             linspace(0,2*pi,1000));
+% 
+% theta_ell = visviva_spacing(a_ell, e_ell, mu_N, n_elliptical);
+% theta_polar = visviva_spacing(a_polar, e_polar, mu_N, n_polar);
+% theta_Triton = linspace(0, 2*pi, n_total);
+% 
+% % === Orbit Coordinates ===
+% orbit_coords = @(a,e,theta,inc) [ ...
+%     a*(1 - e^2)./(1 + e*cos(theta)) .* cos(theta); ...
+%     a*(1 - e^2)./(1 + e*cos(theta)) .* sin(theta); ...
+%     a*(1 - e^2)./(1 + e*cos(theta)) .* sin(theta)*sind(inc)];
+% 
+% orbit_ell = orbit_coords(a_ell, e_ell, theta_ell, incl_elliptical);
+% orbit_polar = orbit_coords(a_polar, e_polar, theta_polar, incl_polar);
+% triton_path = orbit_coords(r_Triton_orbit, 0, theta_Triton, incl_triton);
+% 
+% % === FLYBY ARC ===
+% flyby_start = orbit_ell(:, end);
+% flyby_end = orbit_polar(:, 1);
+% t_fly = linspace(0, 1, n_flyby);
+% flyby_mid = (flyby_start + flyby_end)/2 + [0; 0; 8000];  % bump up
+% flyby_arc = (1 - t_fly).^2 .* flyby_start + ...
+%             2 * (1 - t_fly) .* t_fly .* flyby_mid + ...
+%             t_fly.^2 .* flyby_end;
+% 
+% % === FULL TRAJECTORY ===
+% trajectory = [orbit_ell, flyby_arc, orbit_polar];
+% 
+% % === SETUP PLOT ===
+% figure;
+% hold on; grid on; axis equal;
+% xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
+% title('3D Neptune Flyby with Polar Capture');
+% 
+% % === Neptune ===
+% [sx, sy, sz] = sphere(40);
+% surf(R_N*sx, R_N*sy, R_N*sz, 'FaceColor', 'cyan', 'EdgeColor', 'none', 'FaceAlpha', 0.3);
+% plot3(0, 0, 0, 'bo', 'MarkerFaceColor', 'blue', 'DisplayName', 'Neptune');
+% 
+% % === Orbits ===
+% plot3(orbit_ell(1,:), orbit_ell(2,:), orbit_ell(3,:), 'b--', 'DisplayName', 'Elliptical Orbit');
+% plot3(flyby_arc(1,:), flyby_arc(2,:), flyby_arc(3,:), 'm-', 'LineWidth', 1.5, 'DisplayName', 'Flyby Arc');
+% plot3(orbit_polar(1,:), orbit_polar(2,:), orbit_polar(3,:), 'g--', 'DisplayName', 'Polar Orbit');
+% plot3(triton_path(1,:), triton_path(2,:), triton_path(3,:), 'k--', 'LineWidth', 1.2, 'DisplayName', 'Triton Orbit');
+% 
+% % === Spacecraft marker and trail ===
+% sc = plot3(trajectory(1,1), trajectory(2,1), trajectory(3,1), ...
+%     'ro', 'MarkerFaceColor', 'r', 'MarkerSize', 6, 'DisplayName', 'Spacecraft');
+% trail = plot3(NaN, NaN, NaN, 'r-', 'LineWidth', 2.5, 'DisplayName', 'Trajectory Trail');
+% 
+% % === Triton Sphere (scaled up) ===
+% [u, v] = meshgrid(linspace(0, 2*pi, 30), linspace(0, pi, 20));
+% xT = R_Triton*2.5 * cos(u) .* sin(v);
+% yT = R_Triton*2.5 * sin(u) .* sin(v);
+% zT = R_Triton*2.5 * cos(v);
+% Triton = surf(xT + triton_path(1,1), ...
+%               yT + triton_path(2,1), ...
+%               zT + triton_path(3,1), ...
+%               'FaceColor', 'orange', 'EdgeColor', 'black', ...
+%               'LineWidth', 0.5, 'FaceAlpha', 1, 'DisplayName', 'Triton');
+% 
+% legend;
+% view(45, 25);
+% xlim([-4e5, 2e5]); ylim([-3e5, 3e5]); zlim([-2.5e5, 2.5e5]);
+% 
+% % === ANIMATION LOOP ===
+% for i = 1:n_total
+%     % Spacecraft update
+%     sc.XData = trajectory(1,i);
+%     sc.YData = trajectory(2,i);
+%     sc.ZData = trajectory(3,i);
+% 
+%     trail.XData = trajectory(1,1:i);
+%     trail.YData = trajectory(2,1:i);
+%     trail.ZData = trajectory(3,1:i);
+% 
+%     % Triton update
+%     Triton.XData = xT + triton_path(1,i);
+%     Triton.YData = yT + triton_path(2,i);
+%     Triton.ZData = zT + triton_path(3,i);
+% 
+%     drawnow;
+% end
 
 
 
