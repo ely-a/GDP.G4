@@ -54,11 +54,13 @@ r1 = r_sc(2, :)';          % initial position (km). avoid starting inside earth!
 v1 = (r_sc(2, :) - r_sc(1, :))' / 86400;  % finite-diff estimate of velocity (km/s)
 
 % Propagation duration in days
-tcm_interval = 30; % TCM once every 30 days
+tcm_interval = 180; % TCM once every 30 days
 time_elapsed = 0;
 dv_total = 0;
 big_rv_propagated = [r1' v1'];
 dv_list = [];
+tcm_list = [];
+targets = [];
 
 % Call n-body propagator
 while time_elapsed < n
@@ -66,11 +68,14 @@ while time_elapsed < n
     if tf_days == 0
         break
     end
+    if 465 - time_elapsed < tcm_interval && time_elapsed < 465
+        tf_days = 465 - time_elapsed;
+    end
     rv_propagated = propagate_orbit_nbody(r1, v1, tf_days, mu_sun, mu_planets, r_planets,radius,S0,R_S,c,C_R,A_s,m);
     r1 = rv_propagated(end, 1:3);
     v1 = rv_propagated(end, 4:6);
     big_rv_propagated = [big_rv_propagated; rv_propagated];
-    time_elapsed = time_elapsed + tf_days;
+    tcm_list = [tcm_list time_elapsed + 1];
 
     % test
     % correction_vector = r_sc(time_elapsed, :) - r1; % vector in correction direction
@@ -79,11 +84,20 @@ while time_elapsed < n
     % v1 = v1 + dv;
 
     % lambert solver test
-    endpos = r_sc(min(n, time_elapsed + tf_days), :);
-    [V1, ~] = lambert2(r1, endpos, tf_days, 0, mu_sun);
-    dv = V1 - v1;
-    dv_total = dv_total + norm(dv);
-    dv_list = [dv_list dv];
+    time_elapsed = time_elapsed + tf_days;
+    if 466 - time_elapsed < tcm_interval && time_elapsed < 465
+        tf_days2 = 465 - time_elapsed;
+    else
+        tf_days2 = tcm_interval;
+    end
+    endpos = r_sc(min(n, time_elapsed + tf_days2), :);
+    targets = [targets; endpos];
+    [V1, ~] = lambert2(r1, endpos, tf_days2, 0, mu_sun);
+    dv = (V1 - v1);
+    if norm(dv) < 0.1
+        dv_total = dv_total + norm(dv);
+        dv_list = [dv_list; dv];
+    end
     v1 = v1 + dv;
 end
 
@@ -92,9 +106,10 @@ figure;
 plot3(r_sc(:, 1), r_sc(:, 2), r_sc(:, 3), 'b', 'LineWidth', 1.5);
 hold on;
 plot3(big_rv_propagated(:,1), big_rv_propagated(:,2), big_rv_propagated(:,3), 'r', 'LineWidth', 1.5);
-scatter3(r_sc(1:1000,1), ...
-    r_sc(1:1000,2), ...
-    r_sc(1:1000,3), 'g', 'LineWidth', 1.5)
+scatter3(r_sc(tcm_list,1), ...
+    r_sc(tcm_list,2), ...
+    r_sc(tcm_list,3), 'kx', 'LineWidth', 1.5)
+scatter3(targets(:, 1), targets(:, 2), targets(:, 3), 'go', 'filled')
 legend('Original r_{sc}', 'Propagated (n-body)');
 xlabel('X (km)');
 ylabel('Y (km)');
@@ -105,7 +120,7 @@ title('Spacecraft Orbit Propagation (N-body vs Original)');
 set(gca, 'Clipping', 'off');
 
 figure
-plot(1:300, dv_list)
+semilogy(1:length(dv_list), dv_list)
 
 % =========================================================================
 

@@ -24,7 +24,7 @@ r_planets = r_planets(1:n, :);
 vec1 = r_sc(465, :) - r_sc(464, :);
 vec2 = r_sc(467, :) - r_sc(466, :);
 x_vector = (vec1 + vec2) / norm(vec1 + vec2) * x;
-r_planets()
+r_planets(:, 10:12) = r_planets(:, 10:12) - x_vector;
 
 % constants
 mu = 1.32712e11; % for the sun
@@ -54,7 +54,7 @@ r1 = r_sc(2, :)';          % initial position (km). avoid starting inside earth!
 v1 = (r_sc(2, :) - r_sc(1, :))' / 86400;  % finite-diff estimate of velocity (km/s)
 
 % Propagation duration in days
-tcm_interval = 30; % TCM once every 30 days
+tcm_interval = 180; % TCM once every 30 days
 time_elapsed = 0;
 dv_total = 0;
 big_rv_propagated = [r1' v1'];
@@ -66,6 +66,7 @@ while time_elapsed < n
     if tf_days == 0
         break
     end
+    if time_elap
     rv_propagated = propagate_orbit_nbody(r1, v1, tf_days, mu_sun, mu_planets, r_planets,radius,S0,R_S,c,C_R,A_s,m);
     r1 = rv_propagated(end, 1:3);
     v1 = rv_propagated(end, 4:6);
@@ -81,11 +82,9 @@ while time_elapsed < n
     % lambert solver test
     endpos = r_sc(min(n, time_elapsed + tf_days), :);
     [V1, ~] = lambert2(r1, endpos, tf_days, 0, mu_sun);
-    dv = V1 - v1;
-    if norm(dv) < 0.1
-        dv_total = dv_total + norm(dv);
-    end
-    dv_list = [dv_list dv];
+    dv = (V1 - v1);
+    dv_total = dv_total + norm(dv);
+    dv_list = [dv_list; dv];
     v1 = v1 + dv;
 end
 
@@ -94,9 +93,9 @@ figure;
 plot3(r_sc(:, 1), r_sc(:, 2), r_sc(:, 3), 'b', 'LineWidth', 1.5);
 hold on;
 plot3(big_rv_propagated(:,1), big_rv_propagated(:,2), big_rv_propagated(:,3), 'r', 'LineWidth', 1.5);
-scatter3(r_sc(1:1000,1), ...
-    r_sc(1:1000,2), ...
-    r_sc(1:1000,3), 'g', 'LineWidth', 1.5)
+scatter3(r_sc(1:tcm_interval:end,1), ...
+    r_sc(1:tcm_interval:end,2), ...
+    r_sc(1:tcm_interval:end,3), 'g', 'LineWidth', 1.5)
 legend('Original r_{sc}', 'Propagated (n-body)');
 xlabel('X (km)');
 ylabel('Y (km)');
@@ -105,6 +104,9 @@ grid on;
 axis equal;
 title('Spacecraft Orbit Propagation (N-body vs Original)');
 set(gca, 'Clipping', 'off');
+
+figure
+semilogy(1:length(dv_list), dv_list)
 
 % =========================================================================
 
