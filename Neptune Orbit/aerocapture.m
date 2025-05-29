@@ -32,12 +32,12 @@ rho_vals = [3.31533855e-01 1.52964747e-01 2.54401400e-01 1.31939086e-02
  1.40566585e-12 1.31349140e-12 1.22739290e-12 1.14696747e-12
  1.06492368e-12 9.75065638e-13 8.95724624e-13 8.22854111e-13];
 rho_vals = reshape(rho_vals.', [100, 1]);
-rho_vals_min = 10 .^ (log10(rho_vals) - 0.1);
-rho_vals_max = 10 .^ (log10(rho_vals) + 0.1);
+rho_vals_min = 10 .^ (log10(rho_vals) - 0.05);
+rho_vals_max = 10 .^ (log10(rho_vals) + 0.05);
 
 % inputs
 mu = 6.836529e15; % Neptune gravitational parameter, km^3/s^2
-h_target = 2e6; % target altitude in m
+h_target = 1.4e6; % target altitude in m
 v_pe = 29000;  % m/s
 
 % orbiter properties
@@ -62,9 +62,9 @@ figure(1); hold on; title("Acceleration vs Time"); xlabel("Time (s)"); ylabel("A
 figure(2); hold on; title("Velocity vs Time"); xlabel("Time (s)"); ylabel("Velocity (m/s)");
 figure(3); hold on; title("Altitude vs Time"); xlabel("Time (s)"); ylabel("Altitude (m)");
 figure(4); hold on; title("Trajectory"); xlabel("Distance (km)"); ylabel("Distance (km)");
-plot_h = 177500; % periapsis aiming height in m to plot the trajectory for
+plot_h = 182600; % periapsis aiming height in m to plot the trajectory for
 
-for h_pe = plot_h:plot_h %1.3e5:1e2:2e5
+for h_pe = 1.3e5:1e2:2e5 % plot_h:plot_h
 
     disp(strcat("Aiming Periapsis: ", num2str(h_pe/1e3), " km"))
     % plotting lists
@@ -124,19 +124,19 @@ for h_pe = plot_h:plot_h %1.3e5:1e2:2e5
         % Plot acceleration
         figure(1)
         plot(tList, aList, LineWidth=2, color="black");
-        text(tList(end), aList(end), labelStr, 'FontSize', 8);
+        % text(tList(end), aList(end), labelStr, 'FontSize', 8);
         grid on
     
         % Plot velocity
         figure(2)
         plot(tList, vList, LineWidth=2, color="black");
-        text(tList(end), vList(end), labelStr, 'FontSize', 8);
+        % text(tList(end), vList(end), labelStr, 'FontSize', 8);
         grid on
     
         % Plot altitude
         figure(3)
         plot(tList, altList, LineWidth=2, color="black");
-        text(tList(end), altList(end), labelStr, 'FontSize', 8);
+        % text(tList(end), altList(end), labelStr, 'FontSize', 8);
         grid on
     end
 
@@ -155,6 +155,8 @@ for h_pe = plot_h:plot_h %1.3e5:1e2:2e5
             maxacc = max(aList);
             maxaccList = [maxaccList maxacc];
         end
+        finalV = v;
+        finalR = r;
     end
 
     % ====================== MIN DENSITY CASE ===========================
@@ -271,23 +273,24 @@ for h_pe = plot_h:plot_h %1.3e5:1e2:2e5
             maxacc = max(aList);
             maxaccList_max = [maxaccList_max maxacc];
         end
-        finalV = v;
-        finalR = r;
     end
 end
 
-% plot Neptune
+% plot Neptune + atmosphere
 figure(4)
 theta = linspace(0, 2*pi, 500);
 circleX = R_Neptune * cos(theta) / 1000;
 circleY = R_Neptune * sin(theta) / 1000;
 plot(circleX, circleY)
 fill(circleX, circleY, "blue", "FaceAlpha", 0.5);
+circleX = (R_Neptune + 1400000) * cos(theta) / 1000;
+circleY = (R_Neptune + 1400000) * sin(theta) / 1000;
+plot(circleX, circleY, LineStyle="--", color="black")
 hold on
 % plot pre-aerocapture section
 initialV = [-v_tan; v_rad] / 1000;
 initialR = [0; h_target + R_Neptune] / 1000;
-tf = 1e4;
+tf = 5e3;
 r_out = propagate_orbit(initialR, initialV, tf, mu/1e9);
 plot(r_out(:, 1), r_out(:, 2), color="black", LineWidth=2);
 % plot aerocapture section
@@ -295,7 +298,7 @@ plot(trajList(1, :), trajList(2, :), color="black", LineWidth=2);
 % plot post-aerocapture section
 initialV = finalV / 1000;
 initialR = trajList(:, end);
-tf = 1e4;
+tf = 2e4;
 r_out = propagate_orbit(initialR, initialV, tf, mu/1e9);
 plot(r_out(:, 1), r_out(:, 2), color="black", LineWidth=2);
 % formatting
