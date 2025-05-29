@@ -18,8 +18,8 @@ set(groot,'defaultAxesYGrid','on') % Turn y grid lines on
 
 %% === CONSTANTS ===
 mu_S = 1.32712440018e11;      % Sun gravitational parameter [km^3/s^2]
-mu_N = 6.8365e6;              % Neptune gravitational parameter [km^3/s^2]
-R_N = 24760;                  % Neptune radius [km]
+mu_N = 6.8351e6;              % Neptune gravitational parameter [km^3/s^2]
+R_N = 24764;                  % Neptune radius [km]
 R_T = 13526;
 
 %% === TRITON PROPERTIES ===
@@ -56,7 +56,8 @@ h_cap = sqrt(mu_N * rp_cap * (1 + e_cap));
 i_cap = 180 - i_triton;
 Omega_cap = Omega_triton-180;
 omega_cap = 90;
-[r0_sc, v0_sc] = rv_from_oe(a_cap, e_cap, i_cap, Omega_cap, omega_cap, 180, mu_N);
+[r0_sc, v0_sc] = rv_from_oe(a_cap, e_cap, i_cap, Omega_cap, omega_cap, 0, mu_N);
+P_NOW = 2 * pi * a_cap^(3/2) / sqrt(mu_N)
 
 figure 
 hold on
@@ -132,10 +133,11 @@ v_Triton_int = statevector(1, 4:6)';
 v_inf_in = v_sc_int - v_Triton_int;
 v_inf_in_mag = norm(v_inf_in);
 
-a_flyby = mu_T / v_inf_in_mag^2;   %% 28/05/25 i just changed mu_N into mu_T 
+a_flyby = mu_T / v_inf_in_mag^2; 
 rp_flyby = R_T + 1000;
 e_flyby = rp_flyby/a_flyby + 1;
 delta_flyby = 2*asin(1/e_flyby);
+h_flyby = sqrt(rp_flyby * mu_T * (1 + e_flyby));
 
 v_hat_in = v_inf_in / v_inf_in_mag;
 
@@ -164,7 +166,7 @@ delta_v_flyby = norm(v_sc_after) - norm(v_sc_int)
 %time to change into new trajectory and then do plane changes after this?
 
 [a_return, e_return, h_return, i_return, Omega_return, omega_return, theta_return] = find_OE(r_sc_int, v_sc_after, mu_N);
-[rp_return, vp_return] = rv_from_oe(a_return, e_return, i_return, Omega_return, omega_return, 180 , mu_N) % maybe there was easier way whoops 
+[rp_return, vp_return] = rv_from_oe(a_return, e_return, i_return, Omega_return, omega_return, 180 , mu_N)  
 
 ra_main1 = norm(rp_return);    % then set this ra_main1 as rp_return at 180 deg  - then change to 1.2e5    
 rp_main1 = R_N + 2000;       
@@ -178,8 +180,8 @@ omega_main1 = omega_return;
 
 dv_return = norm(v0_main1 - vp_return)
 
-
-
+P_return = 2 * pi * a_main1^(3/2) / (sqrt(mu_N));
+P_return_days = P_return / (3600 * 24);
 
 
 
@@ -271,7 +273,32 @@ end
 
 
 
+%% 
 
+function [t] = find_time_flyby(altitude)
+
+% need to work out when r = altitude + r_T , find theta from where we are
+% then the time before and after , also check if under sphere of influence
+% of triton ? got all a_flyby, e_flyby ect 
+
+    r_need = R_T + altitude;  
+    theta_need = acosd((h_flyby^2 / (mu_T*r_need) - 1)/e_flyby);
+    
+    E_need = 2 * atan( sqrt((1 - e_flyby)/(1 + e_flyby)) * tand(theta_need/2) );
+    M_need = E_need - e_flyby * sin(E_need);
+    if M_need < 0
+        M_need = M_need + 2*pi;
+    end
+    P_need = 2 * pi * sqrt(a_flyby^3 / mu_T);
+    T_need = M_need * P_need/(2*pi);
+    t = T_need * 2;
+
+end 
+
+
+
+    
+    
 
 
 
