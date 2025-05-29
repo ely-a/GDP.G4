@@ -59,6 +59,8 @@ omega_cap = 90;
 [r0_sc, v0_sc] = rv_from_oe(a_cap, e_cap, i_cap, Omega_cap, omega_cap, 0, mu_N);
 P_NOW = 2 * pi * a_cap^(3/2) / sqrt(mu_N)
 
+save("vectors.mat", "r0_sc", "v0_sc")
+
 figure 
 hold on
 plotOrbit(a_triton, e_triton, i_triton, Omega_triton, omega_triton, mu_N, 'Triton')
@@ -204,14 +206,14 @@ P_return_days = P_return / (3600 * 24);
 %     rs_Triton(:,j) = statevector(1, 1:3)';
 % 
 %     if epochs(j) < ap_epoch
-%         rs_sc(:,j) = rv_from_oe(a_cap, e_cap, i_cap, omega_cap, omega_cap, theta_sc, mu_N);
+%         rs_sc(:,j) = rv_from_oe(a_cap, e_cap, i_cap, Omega_cap, omega_cap, theta_sc, mu_N);
 %         E0 = 2 * atan( sqrt((1 - e_cap)/(1 + e_cap)) * tand(theta_sc/2) );
 %         M0 = E0 - e_cap * sin(E0);
 %         M1 = M0 + sqrt(mu_N/a_cap^3) * dt;
 %         E1 = solve_kepler(M1, e_cap, 1e-8, 1000);
 %         theta_sc = 2 * atand(sqrt((1 + e_cap)/(1 - e_cap)) * tan(E1/2));
 %     else
-%         rs_sc(:,j) = rv_from_oe(a_int, e_int, i_cap, omega_cap, omega_cap, theta_sc, mu_N);
+%         rs_sc(:,j) = rv_from_oe(a_int, e_int, i_cap, Omega_cap, omega_cap, theta_sc, mu_N);
 %         E0 = 2 * atan( sqrt((1 - e_int)/(1 + e_int)) * tand(theta_sc/2) );
 %         M0 = E0 - e_int * sin(E0);
 %         M1 = M0 + sqrt(mu_N/a_int^3) * dt;

@@ -2,6 +2,14 @@ clear
 clc
 close all
 
+%% SET GRAPHING FONTS AND SIZES
+set(groot,'defaultLineLineWidth',2) % Set all line widths to 2 unless stated otherwise
+set(groot,'defaultAxesFontSize',16) % Set all axes font size to 16 unless stated otherwise
+set(groot,'defaulttextfontsize',16) % Set all text font sizes to 16 unless stated otherwise
+set(groot,'defaultLineMarkerSize',12) % Set all marker sizes to 16 unless stated otherwise
+set(groot,'defaultAxesXGrid','on') % Turn x grid lines on
+set(groot,'defaultAxesYGrid','on') % Turn y grid lines on
+
 %% Neptune Constants
 
 mu_neptune = 6.8351e6; % km^3/s^2
@@ -12,15 +20,14 @@ radius_neptune = 24764; % km
 
 if exist('vectors.mat', 'file') == 2
     load("vectors.mat")
-    r0 = r/1000;
-    v0 = v/1000;
+    r0 = r0_sc;
+    v0 = v0_sc;
 else
     error('no intitial conditions')
 end
 
 % [r0, v0] = rv_from_oe(3e5, 0.9, 90, 90, 250, 0, mu_neptune);
 [a, e, h, i, Omega, omega, theta] = find_OE(r0, v0, mu_neptune);
-
 
 delta_theta = 1;
 thetas = mod(theta:delta_theta:theta+360, 360);
@@ -76,40 +83,40 @@ axis equal;
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
 title('3D Trajectory with J2 Perturbation');
 
-%% Orbital element variation
-% Preallocate orbital elements over time
-N = length(t_out);
-a_vals      = zeros(1, N);
-e_vals      = zeros(1, N);
-i_vals      = zeros(1, N);
-Omega_vals  = zeros(1, N);
-omega_vals  = zeros(1, N);
-theta_vals  = zeros(1, N);
-
-for k = 1:N
-    r_k = r_perturbed(:,k);
-    v_k = v_perturbed(:,k);
-    [a_k, e_k, h_k, i_k, Omega_k, omega_k, theta_k] = find_OE(r_k, v_k, mu_neptune);
-    a_vals(k) = a_k;
-    e_vals(k) = e_k;
-    i_vals(k) = i_k;
-    Omega_vals(k) = Omega_k;
-    omega_vals(k) = omega_k;
-    theta_vals(k) = theta_k;
-end
-
-% Convert time to days
-t_days = t_out / 86400;
-
-% Plot
-figure;
-subplot(3,2,1); plot(t_days, a_vals);       ylabel('a [km]'); title('Semi-major Axis');
-subplot(3,2,2); plot(t_days, e_vals);       ylabel('e'); title('Eccentricity');
-subplot(3,2,3); plot(t_days, (i_vals));      ylabel('i [deg]');
-subplot(3,2,4); plot(t_days, (Omega_vals));  ylabel('\Omega [deg]');
-subplot(3,2,5); plot(t_days, (omega_vals));  ylabel('\omega [deg]');
-subplot(3,2,6); plot(t_days, (theta_vals));  ylabel('\theta [deg]'); xlabel('Time [days]');
-sgtitle('Orbital Elements Over Time (Perturbed)');
+% %% Orbital element variation
+% % Preallocate orbital elements over time
+% N = length(t_out);
+% a_vals      = zeros(1, N);
+% e_vals      = zeros(1, N);
+% i_vals      = zeros(1, N);
+% Omega_vals  = zeros(1, N);
+% omega_vals  = zeros(1, N);
+% theta_vals  = zeros(1, N);
+% 
+% for k = 1:N
+%     r_k = r_perturbed(:,k);
+%     v_k = v_perturbed(:,k);
+%     [a_k, e_k, h_k, i_k, Omega_k, omega_k, theta_k] = find_OE(r_k, v_k, mu_neptune);
+%     a_vals(k) = a_k;
+%     e_vals(k) = e_k;
+%     i_vals(k) = i_k;
+%     Omega_vals(k) = Omega_k;
+%     omega_vals(k) = omega_k;
+%     theta_vals(k) = theta_k;
+% end
+% 
+% % Convert time to days
+% t_days = t_out / 86400;
+% 
+% % Plot
+% figure;
+% subplot(3,2,1); plot(t_days, a_vals);       ylabel('a [km]'); title('Semi-major Axis');
+% subplot(3,2,2); plot(t_days, e_vals);       ylabel('e'); title('Eccentricity');
+% subplot(3,2,3); plot(t_days, (i_vals));      ylabel('i [deg]');
+% subplot(3,2,4); plot(t_days, (Omega_vals));  ylabel('\Omega [deg]');
+% subplot(3,2,5); plot(t_days, (omega_vals));  ylabel('\omega [deg]');
+% subplot(3,2,6); plot(t_days, (theta_vals));  ylabel('\theta [deg]'); xlabel('Time [days]');
+% sgtitle('Orbital Elements Over Time (Perturbed)');
 
 %% J2 Perturbations
 
