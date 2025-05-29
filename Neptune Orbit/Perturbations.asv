@@ -57,9 +57,7 @@ tspan = [0, T];         % time steps
 
 % Integrate perturbed motion
 opts = odeset('RelTol',1e-9, 'AbsTol',1e-9);
-perturbs = ["J2"];
-[t_out, Y_out] = ode113(@(t,Y) eom_perturbed(t, Y, mu_neptune, radius_neptune, perturbs) ...
-                        , tspan, Y0, opts);
+[t_out, Y_out] = ode113(@(t,Y) eom_perturbed(t, Y, mu_neptune, radius_neptune), tspan, Y0, opts);
 
 r_perturbed = Y_out(:,1:3)';
 v_perturbed = Y_out(:,4:6)';
@@ -122,8 +120,6 @@ subplot(3,2,5); plot(t_days, (omega_vals));  ylabel('\omega [deg]');
 subplot(3,2,6); plot(t_days, (theta_vals));  ylabel('\theta [deg]'); xlabel('Time [days]');
 sgtitle('Orbital Elements Over Time (Perturbed)');
 
-%% J2 Omega and omega rate of change comparison
-
 %% J2 Perturbations
 
 function a_J2 = J2_acc(r_vec, mu, R)
@@ -149,13 +145,10 @@ function dY = eom_perturbed(~, Y, mu, R, perturbations)
     v = Y(4:6);
     r_norm = norm(r);
 
-    a_total = -mu * r / r_norm^3;
+    a_gravity = -mu * r / r_norm^3;
+    a_J2 = J2_acc(r, mu, R);
 
-    for pertubation = perturbations
-        if pertubation == "J2"
-            a_total = a_total + J2_acc(r, mu, R);
-        end
-    end
+    a_total = a_gravity + a_J2;
 
     dY = [v; a_total];
 end
