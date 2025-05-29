@@ -123,6 +123,33 @@ subplot(3,2,6); plot(t_days, (theta_vals));  ylabel('\theta [deg]'); xlabel('Tim
 sgtitle('Orbital Elements Over Time (Perturbed)');
 
 %% J2 Omega and omega rate of change comparison
+% === Analytical J2 Drift Rates ===
+
+J2 = 3.411e-3;              % Neptune's J2 coefficient
+mu = mu_neptune;           % km^3/s^2
+R = radius_neptune;        % km
+
+% Use initial orbital elements (from earlier in script)
+n = sqrt(mu / a^3);        % mean motion [rad/s]
+
+% RAAN drift (rad/s)
+Omega_dot_rad = -1.5 * J2 * n * (R/a)^2 * cosd(i) / (1 - e^2)^2;
+
+% Argument of perigee drift (rad/s)
+omega_dot_rad = 0.75 * J2 * n * (R/a)^2 * (5 * cosd(i)^2 - 1) / (1 - e^2)^2;
+
+% Convert to deg/day
+Omega_dot_deg_day = rad2deg(Omega_dot_rad) * 86400;
+omega_dot_deg_day = rad2deg(omega_dot_rad) * 86400;
+
+fprintf('Analytical RAAN drift:       %.6f deg/day\n', Omega_dot_deg_day);
+fprintf('Analytical perigee drift:    %.6f deg/day\n', omega_dot_deg_day);
+
+RAAN_drift_sim = (Omega_vals(end) - Omega_vals(1)) / (t_days(end) - t_days(1));
+omega_drift_sim = (omega_vals(end) - omega_vals(1)) / (t_days(end) - t_days(1));
+
+fprintf('Simulated RAAN drift:        %.6f deg/day\n', RAAN_drift_sim);
+fprintf('Simulated perigee drift:     %.6f deg/day\n', omega_drift_sim);
 
 %% J2 Perturbations
 
