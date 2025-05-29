@@ -22,53 +22,6 @@ mu_N = 6.8365e6;              % Neptune gravitational parameter [km^3/s^2]
 R_N = 24760;                  % Neptune radius [km]
 R_T = 13526;
 
-% == Conversion to Vector Form == 
-% r_sc_sun = [; ; ]; 
-% v_sc_sun = [; ; ];       
-% 
-% % Heliocentric position and velocity of Neptune at arrival (get from JPL Horizons)
-% r_N_sun = [...];  % [x; y; z] in km
-% v_N_sun = [...];  % [vx; vy; vz] in km/s
-% 
-% r_sc_N = r_sc_sun - r_N_sun;      % Neptune-relative position and velocity
-% v_sc_N = v_sc_sun - v_N_sun;  
-% v_hat_sc = v_sc_N / norm(v_sc_N);      % Use original direction but scale to parabolic speed
-% v_parabolic_vec = v_parabolic * v_hat_sc;
-% Compute Neptune-centric orbital elements 
-% You may have a function like this:
-% [a, e, i, RAAN, omega, nu] = rv2coe(r_rel, v_parabolic_vec, mu_N);
-
-
-% WAITING FOR BENS VECTORS - post aerocapture so around 
-
-% r_sc_N = ;
-% v_sc_N = ;
-
-% r_mag_sc_N = norm(r_sc_N);                  % This will be elliptical perigee  
-% 
-% % == Initial Elliptical Capture Orbit ==
-% ra_cap = 7.7455e+06;                     
-% rp_cap = r_mag_sc_N;
-% a_cap = (rp_cap + ra_cap) / 2;
-% e_cap = (ra_cap - rp_cap) / (ra_cap + rp_cap);
-% h_cap = sqrt(mu_N * rp_cap * (1 + e_cap));
-% vp_cap = h_cap / rp_cap;
-
-% Periapsis increase Maneuver / Plane change 
-
-%dv_planechange 
-
-% ra = t_triton_norm 
-
-
-% for varying perigee (same inclination- unless no xsollution_
-% calculate orbital elememts  for orbital eq (h,e)
-% solve for when r = r_Triton from orbital eq
-% calculate theta from here 
-% convert to time - from apoapsis to this point in theta 
-% see where triton is 
-
-
 %% === TRITON PROPERTIES ===
 if exist('moon_orbits.mat', 'file') ~= 2 
     load_moon_data()
@@ -86,10 +39,6 @@ interpolated_time = interp1(triton_times, triton_orbit, arrival_epoch, 'spline')
 r_Triton_0 = interpolated_time(1, 1:3);
 v_Triton_0 = interpolated_time(1, 4:6);
 
-% r_Triton_mag = norm(r_Triton_0);
-% v_Triton_mag = norm(v_Triton_0);
-% Triton_omega = v_Triton_mag / r_Triton_mag; % Angular speed [rad/s]
-
 [a_triton, e_triton, h_triton, i_triton, Omega_triton, omega_triton, ~] = find_OE(r_Triton_0, v_Triton_0, mu_N);
 
 %% Get initial spacecraft orbit
@@ -100,7 +49,7 @@ v_Triton_0 = interpolated_time(1, 4:6);
 % v_sc_initial = [1.2467e+01; -1.2873e+01; 0];
 
 ra_cap = 5.634e6;           % Apoapsis [km]
-rp_cap = R_N + 184.6;                 % Periapsis [km] (initial guess)
+rp_cap = R_N + 2000;       %184.6          % Periapsis [km] (initial guess - can change now - no more aerocapture - doesnt change much if 2000km ect)
 a_cap = (rp_cap + ra_cap)/2;
 e_cap = (ra_cap - rp_cap)/(ra_cap + rp_cap);
 h_cap = sqrt(mu_N * rp_cap * (1 + e_cap));
@@ -175,13 +124,15 @@ end
 
 %% during flyby 
 
+mu_T = 1428.495;
+
 [~, v_sc_int] = rv_from_oe(a_int, e_int, i_cap, Omega_cap, omega_cap, theta_int, mu_N);
 v_Triton_int = statevector(1, 4:6)';
 
 v_inf_in = v_sc_int - v_Triton_int;
 v_inf_in_mag = norm(v_inf_in);
 
-a_flyby = mu_N / v_inf_in_mag^2;
+a_flyby = mu_T / v_inf_in_mag^2;   %% 28/05/25 i just changed mu_N into mu_T 
 rp_flyby = R_T + 1000;
 e_flyby = rp_flyby/a_flyby + 1;
 delta_flyby = 2*asin(1/e_flyby);
@@ -202,7 +153,42 @@ v_sc_after = v_inf_out + v_Triton_int;
 delta_v_flyby = norm(v_sc_after) - norm(v_sc_int)
 
 
-% 
+%% Post flyby - ELYA EXPERIMENTING HERE
+
+% imma explain what i did here before i forget, so worked out orbital
+% elements after flyby, then worked out r,v at apoapsis (180deg) of this orbit then
+% used that r to set the new orbits apoapsis and calculated the velocity at that same point (180deg)
+% hence found dv at apoapsis to set it into new trajectory of rp = 2000 km
+% + r_n to meet instruments 
+%then from here i can repeat same thing and do a dv at periapsis maybe this
+%time to change into new trajectory and then do plane changes after this?
+
+[a_return, e_return, h_return, i_return, Omega_return, omega_return, theta_return] = find_OE(r_sc_int, v_sc_after, mu_N);
+[rp_return, vp_return] = rv_from_oe(a_return, e_return, i_return, Omega_return, omega_return, 180 , mu_N) % maybe there was easier way whoops 
+
+ra_main1 = norm(rp_return);    % then set this ra_main1 as rp_return at 180 deg  - then change to 1.2e5    
+rp_main1 = R_N + 2000;       
+a_main1 = (rp_main1 + ra_main1)/2;
+e_main1 = (ra_main1 - rp_main1)/(ra_main1 + rp_main1);
+h_main1 = sqrt(mu_N * rp_main1 * (1 + e_main1));
+i_main1 = i_return;
+Omega_main1 = Omega_return;
+omega_main1 = omega_return;
+[r0_main1, v0_main1] = rv_from_oe(a_main1, e_main1, i_main1, Omega_main1, omega_main1, 180, mu_N)
+
+dv_return = norm(v0_main1 - vp_return)
+
+
+
+
+
+
+
+
+
+
+
+%%
 % %% Plotting interception
 % 
 % epochs = linspace(arrival_epoch, int_epoch, 1000);
