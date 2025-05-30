@@ -4,15 +4,15 @@ clc
 %% delta v calculations based on masses + launch capacity
 
 % injection
-m_injection = 1400; % kg
-dv_injection = 6200; % m/s
-isp_injection = 335; % s (MMH/NTO)
+m_injection = 1500; % kg
+dv_injection = 6390; % m/s
+isp_injection = 310; % s (MMH/NTO)
 mass_frac_cruise = 0.85; % proportion of cruise stage that is fuel
 m_cruise = m_injection * (1 + exp(dv_injection ...
     / (isp_injection * 9.81)) / mass_frac_cruise);
 
 % earth ejection (direct)
-dv_ejection = 6200; % m/s
+dv_ejection = 7780; % m/s
 isp_ejection = 397; % s (LOx/RP-1)
 mass_frac_kick = 0.9; % proportion of kick stage that is fuel
 m_direct = m_cruise * (1 + exp(dv_ejection ...
@@ -29,7 +29,7 @@ v_LEO = sqrt(mu / rp); % km/s
 v_esc = v_LEO * sqrt(2); % km/s
 
 % vehicle parameters
-fuel_distribution = 0.13; % proportion of fuel carried in FH1
+fuel_distribution = 0; % proportion of fuel carried in FH1
 mass_frac_kick = 0.9; % proportion of kick stage that is fuel
 mass_frac_tanker = 1; % proportion of tanker that is fuel
 isp_FHUS = 397; % s, FH upper stage isp
@@ -80,7 +80,7 @@ ylim([0, max(max(FH1_list, FH2_list))])
 
 % new apoapsis
 rp = 300 + Re; % km
-ra = 42078; % km
+ra = 48788; % km
 sma = 0.5 * (ra + rp); % km
 orbit_num = 4; % number of phasing orbits
 e = (ra - rp) / (ra + rp);
@@ -97,3 +97,27 @@ h_new = sqrt(rp * mu * (1 + e_new)); % km^2/s
 vp = h / rp; % km/s
 vp_new = h_new / rp; % km/s
 dv_total = 2 * abs(vp - vp_new); % km/s
+
+%% finite burn losses
+
+% for r_p = 42078 km
+% dv_1 = 2.4244 km/s before docking
+% dv_2 = 5.2756 km/s after docking
+
+% initial orbit
+e = 0;
+ra = 48878; % km
+rp = 6678; % km'
+sma = rp;
+dv = 2.4244; % km/s
+acc = 10; % burn acceleration, m/s^2
+t = dv * 1000 / acc;
+grav_loss_1 = 1/24 * (mu * (1 + e)) / (sma^3 * (1 - e)^3) * t^2 * dv; % km/s
+
+% second orbit
+e = (ra - rp) / (ra + rp);
+sma = (6678 + 42078) / 2; % km
+dv = 5.2756; % km/s
+acc = 10; % burn acceleration, m/s^2
+t = dv * 1000 / acc;
+grav_loss_2 = 1/24 * (mu * (1 + e)) / (sma^3 * (1 - e)^3) * t^2 * dv; % km/s
