@@ -16,6 +16,13 @@ mu_neptune = 6.8351e6; % km^3/s^2
 mass_neptune = 102.409e24; % kg
 radius_neptune = 24764; % km
 
+%% Load moon data
+
+if exist('moon_orbits.mat', 'file') ~= 2 
+    load_moon_data()
+end 
+load('moon_orbits.mat','orbits_mat','moon_names', 'max_len', 'times_all', 'velocities_mat');
+
 %% Unperturbed Trajectory
 
 if exist('vectors.mat', 'file') == 2
@@ -29,7 +36,7 @@ end
 % [r0, v0] = rv_from_oe(3e5, 0.9, 90, 90, 250, 0, mu_neptune);
 [a, e, h, i, Omega, omega, theta] = find_OE(r0, v0, mu_neptune);
 P = 2 * pi * sqrt(a^3 / mu_neptune);  % seconds
-N_orbits = 40;
+N_orbits = 1;
 T = P * N_orbits;
 
 delta_theta = 1;
@@ -122,34 +129,34 @@ subplot(3,2,5); plot(t_days, (omega_vals));  ylabel('\omega [deg]');
 subplot(3,2,6); plot(t_days, (theta_vals));  ylabel('\theta [deg]'); xlabel('Time [days]');
 sgtitle('Orbital Elements Over Time (Perturbed)');
 
-%% J2 Omega and omega rate of change comparison
-% === Analytical J2 Drift Rates ===
-
-J2 = 3.411e-3;              % Neptune's J2 coefficient
-mu = mu_neptune;           % km^3/s^2
-R = radius_neptune;        % km
-
-% Use initial orbital elements (from earlier in script)
-n = sqrt(mu / a^3);        % mean motion [rad/s]
-
-% RAAN drift (rad/s)
-Omega_dot_rad = -1.5 * J2 * n * (R/a)^2 * cosd(i) / (1 - e^2)^2;
-
-% Argument of perigee drift (rad/s)
-omega_dot_rad = 0.75 * J2 * n * (R/a)^2 * (5 * cosd(i)^2 - 1) / (1 - e^2)^2;
-
-% Convert to deg/day
-Omega_dot_deg_day = rad2deg(Omega_dot_rad) * 86400;
-omega_dot_deg_day = rad2deg(omega_dot_rad) * 86400;
-
-fprintf('Analytical RAAN drift:       %.6f deg/day\n', Omega_dot_deg_day);
-fprintf('Analytical perigee drift:    %.6f deg/day\n', omega_dot_deg_day);
-
-RAAN_drift_sim = (Omega_vals(end) - Omega_vals(1)) / (t_days(end) - t_days(1));
-omega_drift_sim = (omega_vals(end) - omega_vals(1)) / (t_days(end) - t_days(1));
-
-fprintf('Simulated RAAN drift:        %.6f deg/day\n', RAAN_drift_sim);
-fprintf('Simulated perigee drift:     %.6f deg/day\n', omega_drift_sim);
+% %% J2 Omega and omega rate of change comparison
+% % === Analytical J2 Drift Rates ===
+% 
+% J2 = 3.411e-3;              % Neptune's J2 coefficient
+% mu = mu_neptune;           % km^3/s^2
+% R = radius_neptune;        % km
+% 
+% % Use initial orbital elements (from earlier in script)
+% n = sqrt(mu / a^3);        % mean motion [rad/s]
+% 
+% % RAAN drift (rad/s)
+% Omega_dot_rad = -1.5 * J2 * n * (R/a)^2 * cosd(i) / (1 - e^2)^2;
+% 
+% % Argument of perigee drift (rad/s)
+% omega_dot_rad = 0.75 * J2 * n * (R/a)^2 * (5 * cosd(i)^2 - 1) / (1 - e^2)^2;
+% 
+% % Convert to deg/day
+% Omega_dot_deg_day = rad2deg(Omega_dot_rad) * 86400;
+% omega_dot_deg_day = rad2deg(omega_dot_rad) * 86400;
+% 
+% fprintf('Analytical RAAN drift:       %.6f deg/day\n', Omega_dot_deg_day);
+% fprintf('Analytical perigee drift:    %.6f deg/day\n', omega_dot_deg_day);
+% 
+% RAAN_drift_sim = (Omega_vals(end) - Omega_vals(1)) / (t_days(end) - t_days(1));
+% omega_drift_sim = (omega_vals(end) - omega_vals(1)) / (t_days(end) - t_days(1));
+% 
+% fprintf('Simulated RAAN drift:        %.6f deg/day\n', RAAN_drift_sim);
+% fprintf('Simulated perigee drift:     %.6f deg/day\n', omega_drift_sim);
 
 %% J2 Perturbations
 
@@ -169,6 +176,11 @@ function a_J2 = J2_acc(r_vec, mu, R)
     ];
 end
 
+%% N-body Perturbations
+
+function a_N_body = N_body_acc()
+
+end
 %% Perturbed equations of motion
 
 function dY = eom_perturbed(~, Y, mu, R, perturbations)
