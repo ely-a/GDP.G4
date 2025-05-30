@@ -49,7 +49,7 @@ v_Triton_0 = interpolated_time(1, 4:6);
 % v_sc_initial = [1.2467e+01; -1.2873e+01; 0];
 
 ra_cap = 5.634e6;           % Apoapsis [km]
-rp_cap = R_N + 2000;       %184.6          % Periapsis [km] (initial guess - can change now - no more aerocapture - doesnt change much if 2000km ect)
+rp_cap = R_N + 10000;       % Periapsis [km] (initial guess - can change now - no more aerocapture - doesnt change much if 2000km ect)
 a_cap = (rp_cap + ra_cap)/2;
 e_cap = (ra_cap - rp_cap)/(ra_cap + rp_cap);
 h_cap = sqrt(mu_N * rp_cap * (1 + e_cap));
@@ -137,7 +137,8 @@ v_inf_in_mag = norm(v_inf_in);
 
 a_flyby = mu_T / v_inf_in_mag^2; 
 rp_flyby = R_T + 1000;
-e_flyby = rp_flyby/a_flyby + 1;
+%e_flyby = rp_flyby/a_flyby + 1;
+e_flyby = 1 + (rp_flyby * v_inf_in_mag^2) / mu_T; % tf????? 1047 ????
 delta_flyby = 2*asin(1/e_flyby);
 h_flyby = sqrt(rp_flyby * mu_T * (1 + e_flyby));
 
@@ -157,7 +158,7 @@ v_sc_after = v_inf_out + v_Triton_int;
 delta_v_flyby = norm(v_sc_after) - norm(v_sc_int)
 
 
-%% Post flyby - ELYA EXPERIMENTING HERE
+%% Post flyby - start of 5 years 
 
 % imma explain what i did here before i forget, so worked out orbital
 % elements after flyby, then worked out r,v at apoapsis (180deg) of this orbit then
@@ -168,10 +169,10 @@ delta_v_flyby = norm(v_sc_after) - norm(v_sc_int)
 %time to change into new trajectory and then do plane changes after this?
 
 [a_return, e_return, h_return, i_return, Omega_return, omega_return, theta_return] = find_OE(r_sc_int, v_sc_after, mu_N);
-[rp_return, vp_return] = rv_from_oe(a_return, e_return, i_return, Omega_return, omega_return, 180 , mu_N)  
+[rp_return, vp_return] = rv_from_oe(a_return, e_return, i_return, Omega_return, omega_return, 180 , mu_N);  % at apoapsis 
 
 ra_main1 = norm(rp_return);    % then set this ra_main1 as rp_return at 180 deg  - then change to 1.2e5    
-rp_main1 = R_N + 2000;       
+rp_main1 = R_N + 2000;      % adjust  
 a_main1 = (rp_main1 + ra_main1)/2;
 e_main1 = (ra_main1 - rp_main1)/(ra_main1 + rp_main1);
 h_main1 = sqrt(mu_N * rp_main1 * (1 + e_main1));
@@ -180,52 +181,121 @@ Omega_main1 = Omega_return;
 omega_main1 = omega_return;
 [r0_main1, v0_main1] = rv_from_oe(a_main1, e_main1, i_main1, Omega_main1, omega_main1, 180, mu_N)
 
-dv_return = norm(v0_main1 - vp_return)
+dv_return = norm(v0_main1 - vp_return) % dv at apoapsis 
 
-P_return = 2 * pi * a_main1^(3/2) / (sqrt(mu_N));
+P_return = 2 * pi * a_main1^(3/2) / (sqrt(mu_N))
 P_return_days = P_return / (3600 * 24);
 
 
+time_flyby_inst = find_time_flyby(R_T, h_flyby, e_flyby, a_flyby, mu_T, 50000)
+
+time_flyby_inst * 60
+
+
+
+%find theta for the perigeemain position then for the current flyby
+%position we have? then do time for those and take away then add onto int
+%epoch 
+
+%theta where we are and then at apog 
+
+%theta at flyby = theta_return  - finding time from periapsis to apoapsis 
+[a_backtoapo, e_backtoapo, h_backtoapo, i_backtoapo, ~, ~, theta_backtoapo] = find_OE(rp_return, vp_return, mu_N);
+
+
+P_backtoapo = 2 * pi * sqrt(a_return^3 / mu_N);
+T_backtoapo = P_backtoapo/2;
+%T_backtoapo = M_backtoapo * P_backtoapo/(2*pi);  
+
+%finding time from periapsis for where we are in flyby 
+theta_return = 360 - theta_return; % so this will be time from perigee to down to initial flyby pos to reach 
+E_return = 2 * atan( sqrt((1 - e_return)/(1 + e_return)) * tand(theta_return/2) );
+M_return = E_return - e_return * sin(E_return);
+    if M_return < 0
+        M_return = M_return + 2*pi;
+    end
+P_return = 2 * pi * sqrt(a_return^3 / mu_N);
+T_return = M_return * P_return/(2*pi);
+
+
+time_taken = T_backtoapo + T_return; % so adding the 180deg from perig to apog + flyby to perig 
+
+epoch_after = int_epoch + time_taken / (3600 * 24);
+
+%% After returning to to neptune epoch 
+
+%epoch_main1 = epoch_after + time_taken2 / (3600 * 24);
+
+
+%% final orbit - hopefully?
+
+ra_final = 7e5;   
+rp_final = R_N + 2000;       
+a_final = (rp_final + ra_final)/2;
+e_final = (ra_final - rp_final)/(ra_final + rp_final);
+h_final = sqrt(mu_N * rp_final * (1 + e_final));
+i_final = i_main1;
+Omega_final = Omega_main1;
+omega_final = omega_main1;
+%[r0_final, v0_final] = rv_from_oe(a_final, e_final, i_final, Omega_final, omega_final, 180, mu_N);
+
+%dv_return = norm(v0_main1 - vp_return) % dv at apoapsis 
+
+P_return = 2 * pi * a_final^(3/2) / (sqrt(mu_N))
 
 
 
 
+%
+%% Plotting interception
+
+epochs = linspace(arrival_epoch, epoch_after, 1000);
+dt = (epochs(2) - epochs(1)) * 24 * 3600;
+rs_Triton = zeros(3, length(epochs));
+rs_sc = zeros(3, length(epochs));
+theta_sc = 0;
+
+for j = 1:length(epochs)
+    statevector = interp1(triton_times, triton_orbit, epochs(j), 'spline');
+    rs_Triton(:,j) = statevector(1, 1:3)';
+
+    if epochs(j) < ap_epoch
+        rs_sc(:,j) = rv_from_oe(a_cap, e_cap, i_cap, Omega_cap, omega_cap, theta_sc, mu_N);
+        E0 = 2 * atan( sqrt((1 - e_cap)/(1 + e_cap)) * tand(theta_sc/2) );
+        M0 = E0 - e_cap * sin(E0);
+        M1 = M0 + sqrt(mu_N/a_cap^3) * dt;
+        E1 = solve_kepler(M1, e_cap, 1e-8, 1000);
+        theta_sc = 2 * atand(sqrt((1 + e_cap)/(1 - e_cap)) * tan(E1/2));
+    elseif epochs(j) > ap_epoch && epochs(j) < int_epoch
+        rs_sc(:,j) = rv_from_oe(a_int, e_int, i_cap, Omega_cap, omega_cap, theta_sc, mu_N);
+        E0 = 2 * atan( sqrt((1 - e_int)/(1 + e_int)) * tand(theta_sc/2) );
+        M0 = E0 - e_int * sin(E0);
+        M1 = M0 + sqrt(mu_N/a_int^3) * dt;
+        E1 = solve_kepler(M1, e_int, 1e-8, 1000);
+        theta_sc = 2 * atand(sqrt((1 + e_int)/(1 - e_int)) * tan(E1/2));
+    else %epochs(j) > int_epoch && epochs(j) < epoch_after
+        rs_sc(:,j) = rv_from_oe(a_return, e_return, i_cap, Omega_cap, omega_cap, theta_sc, mu_N);
+        E0 = 2 * atan( sqrt((1 - e_return)/(1 + e_return)) * tand(theta_sc/2) );
+        M0 = E0 - e_return * sin(E0);
+        M1 = M0 + sqrt(mu_N/a_return^3) * dt;
+        E1 = solve_kepler(M1, e_return, 1e-8, 1000);
+        theta_sc = 2 * atand(sqrt((1 + e_return)/(1 - e_return)) * tan(E1/2));
+    end
+
+end
+
+visual_radius = 5 * R_N;  % Scaled-up radius for visibility
+[xx, yy, zz] = sphere(50);
+surf(visual_radius*xx, visual_radius*yy, visual_radius*zz, ...
+     'FaceColor', [0.2 0.4 0.85], ...
+     'EdgeColor', 'none', ...
+     'FaceAlpha', 0.5, ...
+     'DisplayName', 'Neptune');
 
 
-%%
-% %% Plotting interception
-% 
-% epochs = linspace(arrival_epoch, int_epoch, 1000);
-% dt = (epochs(2) - epochs(1)) * 24 * 3600;
-% rs_Triton = zeros(3, length(epochs));
-% rs_sc = zeros(3, length(epochs));
-% theta_sc = 0;
-% 
-% for j = 1:length(epochs)
-%     statevector = interp1(triton_times, triton_orbit, epochs(j), 'spline');
-%     rs_Triton(:,j) = statevector(1, 1:3)';
-% 
-%     if epochs(j) < ap_epoch
-%         rs_sc(:,j) = rv_from_oe(a_cap, e_cap, i_cap, Omega_cap, omega_cap, theta_sc, mu_N);
-%         E0 = 2 * atan( sqrt((1 - e_cap)/(1 + e_cap)) * tand(theta_sc/2) );
-%         M0 = E0 - e_cap * sin(E0);
-%         M1 = M0 + sqrt(mu_N/a_cap^3) * dt;
-%         E1 = solve_kepler(M1, e_cap, 1e-8, 1000);
-%         theta_sc = 2 * atand(sqrt((1 + e_cap)/(1 - e_cap)) * tan(E1/2));
-%     else
-%         rs_sc(:,j) = rv_from_oe(a_int, e_int, i_cap, Omega_cap, omega_cap, theta_sc, mu_N);
-%         E0 = 2 * atan( sqrt((1 - e_int)/(1 + e_int)) * tand(theta_sc/2) );
-%         M0 = E0 - e_int * sin(E0);
-%         M1 = M0 + sqrt(mu_N/a_int^3) * dt;
-%         E1 = solve_kepler(M1, e_int, 1e-8, 1000);
-%         theta_sc = 2 * atand(sqrt((1 + e_int)/(1 - e_int)) * tan(E1/2));
-%     end
-% 
-% end
-% 
-% %% Animate
-% 
-% animate_two_trajectories([rs_sc, r_sc_int], [rs_Triton, r_Triton_int])
+%% Animate
+
+animate_two_trajectories(rs_sc, rs_Triton)
 
 
 %%
@@ -240,60 +310,149 @@ function plotOrbit(a, e, i, Omega, omega, mu, name)
     plot3(r(1,:), r(2,:), r(3,:), DisplayName=name);  % unperturbed
 end
 
-function animate_two_trajectories(r1, r2)
-    % r1, r2 are 3xN matrices; columns are position vectors over time
+function animate_two_trajectories(r_sc, r_triton)
+    % === PARAMETERS ===
+    R_N = 24764; % Neptune radius [km]
+    visual_radius = 2.5 * R_N; % make Neptune appear larger
+    trail_len = 80;            % number of trailing points for spacecraft
 
-    % Setup figure
-    figure;
+    % === SETUP FIGURE ===
+    figure('Position', [100, 100, 1600, 900])
     hold on;
     grid on;
     axis equal;
     xlabel('X [km]');
     ylabel('Y [km]');
     zlabel('Z [km]');
-    title('Trajectory Animation');
+    title('Neptune System Trajectory');
     view(3);
 
-    % Plot full trajectories as lines for context
-    plot3(r1(1,:), r1(2,:), r1(3,:), 'b--', 'DisplayName', 'Object 1 Path');
-    plot3(r2(1,:), r2(2,:), r2(3,:), 'r--', 'DisplayName', 'Object 2 Path');
+    % === COLORS ===
+    col_sc = [0.6, 0.2, 0.8];    % purple spacecraft
+    col_triton = [0.9, 0.1, 0.1];   % orange Triton
+    col_neptune = [0.2, 0.4, 0.85];   % blue Neptune
 
-    % Create animated points
-    h1 = plot3(r1(1,1), r1(2,1), r1(3,1), 'bo', 'MarkerSize', 8, 'DisplayName', 'Object 1');
-    h2 = plot3(r2(1,1), r2(2,1), r2(3,1), 'ro', 'MarkerSize', 8, 'DisplayName', 'Object 2');
-    legend;
 
-    % Animate
-    N = size(r1, 2);
-    for k = 1:N
-        set(h1, 'XData', r1(1,k), 'YData', r1(2,k), 'ZData', r1(3,k));
-        set(h2, 'XData', r2(1,k), 'YData', r2(2,k), 'ZData', r2(3,k));
-        drawnow;
-        pause(0.01); % Adjust speed here
-    end
+    % === PLOT NEPTUNE ===
+    visual_radius = 3 * R_N;
+    [xx, yy, zz] = sphere(50);
+    surf(visual_radius*xx, visual_radius*yy, visual_radius*zz, ...
+        'FaceColor', col_neptune, ...
+        'EdgeColor', 'none', ...
+        'FaceAlpha', 0.5, ...
+        'DisplayName', 'Neptune');
+
+    % === PLOT STATIC ORBITS ===
+    plot3(r_triton(1,:), r_triton(2,:), r_triton(3,:), '-', ...
+        'Color', col_triton, 'LineWidth', 2, 'DisplayName', 'Triton Orbit');
+    plot3(r_sc(1,:), r_sc(2,:), r_sc(3,:), '--', ...
+        'Color', col_sc, 'LineWidth', 2, 'DisplayName', 'Spacecraft Trajectory');
+    h_tail = plot3(NaN, NaN, NaN, '-', ...
+        'Color', col_sc * 0.8, 'LineWidth', 1.5, 'DisplayName', 'Trajectory Path');
+
+    % === CREATE ANIMATED OBJECTS ===
+    h_sc = plot3(NaN, NaN, NaN, 'o', 'MarkerSize', 8, ...
+        'MarkerFaceColor', col_sc, 'MarkerEdgeColor', 'k', 'DisplayName', 'Spacecraft');
+    h_triton = plot3(NaN, NaN, NaN, 'o', 'MarkerSize', 8, ...
+        'MarkerFaceColor', col_triton, 'MarkerEdgeColor', 'k', 'DisplayName', 'Triton');
+    
+
+    legend('Location', 'bestoutside');
+
+    % === ANIMATION LOOP ===
+    N = size(r_sc, 2);
+    % === CREATE VIDEO WRITER ===
+v = VideoWriter('neptune_trajectory.mp4', 'MPEG-4');
+v.Quality = 100;         % Max quality
+v.FrameRate = 30;        % 30 frames per second
+open(v);
+
+% === ANIMATION LOOP ===
+for k = 1:N
+    % Animate spacecraft
+    set(h_sc, 'XData', r_sc(1,k), 'YData', r_sc(2,k), 'ZData', r_sc(3,k));
+
+    % Tail
+    tail_range = max(1, k - trail_len):k;
+    set(h_tail, 'XData', r_sc(1,tail_range), ...
+                'YData', r_sc(2,tail_range), ...
+                'ZData', r_sc(3,tail_range));
+
+    % Triton
+    set(h_triton, 'XData', r_triton(1,k), 'YData', r_triton(2,k), 'ZData', r_triton(3,k));
+
+    drawnow;
+
+    % Capture current frame
+    frame = getframe(gcf);
+    writeVideo(v, frame);
 end
+
+% === CLOSE VIDEO FILE ===
+close(v);
+disp('🎥 Video saved as "neptune_trajectory.mp4".');
+
+end
+
+
+
+
+% function animate_two_trajectories(r1, r2)
+%     % r1, r2 are 3xN matrices; columns are position vectors over time
+% 
+%     % Setup figure
+%     figure;
+%     hold on;
+%     grid on;
+%     axis equal;
+%     xlabel('X [km]');
+%     ylabel('Y [km]');
+%     zlabel('Z [km]');
+%     title('Trajectory Animation');
+%     view(3);
+% 
+%     % Plot full trajectories as lines for context
+%     plot3(r1(1,:), r1(2,:), r1(3,:), 'b--', 'DisplayName', 'Object 1 Path');
+%     plot3(r2(1,:), r2(2,:), r2(3,:), 'r--', 'DisplayName', 'Object 2 Path');
+% 
+%     % Create animated points
+%     h1 = plot3(r1(1,1), r1(2,1), r1(3,1), 'bo', 'MarkerSize', 8, 'DisplayName', 'Object 1');
+%     h2 = plot3(r2(1,1), r2(2,1), r2(3,1), 'ro', 'MarkerSize', 8, 'DisplayName', 'Object 2');
+%     legend;
+% 
+%     % Animate
+%     N = size(r1, 2);
+%     for k = 1:N
+%         set(h1, 'XData', r1(1,k), 'YData', r1(2,k), 'ZData', r1(3,k));
+%         set(h2, 'XData', r2(1,k), 'YData', r2(2,k), 'ZData', r2(3,k));
+%         drawnow;
+%         pause(0.001); % Adjust speed here
+%     end
+% end
 
 
 
 %% 
 
-function [t] = find_time_flyby(altitude)
+function [t] = find_time_flyby(R, h, e, a, mu, altitude)
 
 % need to work out when r = altitude + r_T , find theta from where we are
 % then the time before and after , also check if under sphere of influence
 % of triton ? got all a_flyby, e_flyby ect 
 
-    r_need = R_T + altitude;  
-    theta_need = acosd((h_flyby^2 / (mu_T*r_need) - 1)/e_flyby);
+    r_need = R + altitude;  
+    theta_need = acosd((h^2 / (mu*r_need) - 1)/e)
     
-    E_need = 2 * atan( sqrt((1 - e_flyby)/(1 + e_flyby)) * tand(theta_need/2) );
-    M_need = E_need - e_flyby * sin(E_need);
+    F_need = 2 * atan( sqrt((e - 1)/(e + 1)) * tand(theta_need/2) );
+    M_need = e * sin(F_need) - F_need;
     if M_need < 0
         M_need = M_need + 2*pi;
     end
-    P_need = 2 * pi * sqrt(a_flyby^3 / mu_T);
+    P_need = 2 * pi * sqrt(a^3 / mu);
     T_need = M_need * P_need/(2*pi);
     t = T_need * 2;
+    t = t /(3600);
+
 
 end 
 
