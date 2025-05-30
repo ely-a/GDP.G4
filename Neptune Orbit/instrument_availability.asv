@@ -1,0 +1,36 @@
+clear all
+clc
+
+% inputs
+mu = 6.836529e6;
+RN = 24622; % neptune radius, km
+rp = 10000 + RN; % periapsis radius, km
+ra = (1e4:1000:1e5) + RN; % apoapsis radius, km
+
+% instrument ranges
+instrument_ranges = {
+    'CCD/CMOS',      [500 50000];
+    'Magnetometer',  [37000 738000];
+    'IR',            [500 30000];
+    'VIS/UV',        [500 50000];
+    'Laser Alt.',    [500 2000];
+    'Microwave',     [1000 6000];
+    'Bolometer',     [0 2000];
+    'Plasma',        [25 1e6];
+    'Radar',         [1000 4000];
+};
+
+for apo = ra
+    for inst = instrument_ranges
+        range = inst(2);
+        if apo < min(range)
+            time = 0
+        elseif apo > max(range)
+    end
+end
+
+% calculations
+e = (ra - rp) ./ (ra + rp);
+h = sqrt(rp*mu*(1+e));
+vp = h / rp;
+dv = 26.234 - vp;
