@@ -10,16 +10,16 @@ set(groot,'defaultLineMarkerSize',12) % Set all marker sizes to 16 unless stated
 set(groot,'defaultAxesXGrid','on') % Turn x grid lines on
 set(groot,'defaultAxesYGrid','on') % Turn y grid lines on
 
-%% Neptune Constants
+%% Earth Constants
 
-mu_neptune = 6.8351e6; % km^3/s^2
-mass_neptune = 102.409e24; % kg
-radius_neptune = 24764; % km
+mu_Earth = 398600; % km^3/s^2
+mass_Earth = 5.972e24; % kg
+radius_Earth = 6378; % km
 
 %% Unperturbed Trajectory
 
-if exist('vectors.mat', 'file') == 2
-    load("vectors.mat")
+if exist('vectors_Earth.mat', 'file') == 2
+    load("vectors_Earth.mat")
     r0 = r0_sc;
     v0 = v0_sc;
 else
@@ -27,9 +27,9 @@ else
 end
 
 % [r0, v0] = rv_from_oe(3e5, 0.9, 90, 90, 250, 0, mu_neptune);
-[a, e, h, i, Omega, omega, theta] = find_OE(r0, v0, mu_neptune);
-P = 2 * pi * sqrt(a^3 / mu_neptune);  % seconds
-N_orbits = 40;
+[a, e, h, i, Omega, omega, theta] = find_OE(r0, v0, mu_Earth);
+P = 2 * pi * sqrt(a^3 / mu_Earth);  % seconds
+N_orbits = 20;
 T = P * N_orbits;
 
 delta_theta = 1;
@@ -42,7 +42,7 @@ r_unperturbed(:,1) = r0;
 v_unperturbed(:,1) = v0;
 
 for j = 2:length(thetas)
-    [r_j, v_j] = rv_from_oe(a, e, i, Omega, omega, thetas(j), mu_neptune);
+    [r_j, v_j] = rv_from_oe(a, e, i, Omega, omega, thetas(j), mu_Earth);
     r_unperturbed(:,j) = r_j;
     v_unperturbed(:,j) = v_j;
 end
@@ -58,7 +58,7 @@ tspan = [0, T];         % time steps
 % Integrate perturbed motion
 opts = odeset('RelTol',1e-9, 'AbsTol',1e-9);
 perturbs = ["J2"];
-[t_out, Y_out] = ode113(@(t,Y) eom_perturbed(t, Y, mu_neptune, radius_neptune, perturbs) ...
+[t_out, Y_out] = ode113(@(t,Y) eom_perturbed(t, Y, mu_Earth, radius_Earth, perturbs) ...
                         , tspan, Y0, opts);
 
 r_perturbed = Y_out(:,1:3)';
@@ -100,7 +100,7 @@ theta_vals  = zeros(1, N);
 for k = 1:N
     r_k = r_perturbed(:,k);
     v_k = v_perturbed(:,k);
-    [a_k, e_k, h_k, i_k, Omega_k, omega_k, theta_k] = find_OE(r_k, v_k, mu_neptune);
+    [a_k, e_k, h_k, i_k, Omega_k, omega_k, theta_k] = find_OE(r_k, v_k, mu_Earth);
     a_vals(k) = a_k;
     e_vals(k) = e_k;
     i_vals(k) = i_k;
@@ -125,9 +125,9 @@ sgtitle('Orbital Elements Over Time (Perturbed)');
 %% J2 Omega and omega rate of change comparison
 % === Analytical J2 Drift Rates ===
 
-J2 = 3.411e-3;              % Neptune's J2 coefficient
-mu = mu_neptune;           % km^3/s^2
-R = radius_neptune;        % km
+J2 = 1.082636e-3;           % Earth's J2 coefficient
+mu = mu_Earth;           % km^3/s^2
+R = radius_Earth;        % km
 
 % Use initial orbital elements (from earlier in script)
 n = sqrt(mu / a^3);        % mean motion [rad/s]
@@ -159,7 +159,7 @@ function a_J2 = J2_acc(r_vec, mu, R)
     z = r_vec(3);
     r = norm(r_vec);
 
-    J2 = 3.411e-3;
+    J2 = 1.082636e-3; 
     J2_const = (1.5 * J2 * mu * R^2)/(r^5);
 
     a_J2 = J2_const * [
