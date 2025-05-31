@@ -57,7 +57,7 @@ i_cap = 180 - i_triton;
 Omega_cap = Omega_triton-180;
 omega_cap = 90;
 [r0_sc, v0_sc] = rv_from_oe(a_cap, e_cap, i_cap, Omega_cap, omega_cap, 0, mu_N);
-P_NOW = 2 * pi * a_cap^(3/2) / sqrt(mu_N)
+P_NOW = 2 * pi * a_cap^(3/2) / sqrt(mu_N);
 
 save("vectors.mat", "r0_sc", "v0_sc")
 
@@ -116,8 +116,8 @@ for k = 1 : length(rp_try)
 
 
     if norm(r_Triton_int - r_sc_int) <= R_T + 5000
-        rp_int
-        dv_int = h_cap / ra_cap-h_int/ra_cap
+        rp_int;
+        dv_int = h_cap / ra_cap-h_int/ra_cap;
         break 
     end 
 
@@ -133,12 +133,12 @@ mu_T = 1428.495;
 v_Triton_int = statevector(1, 4:6)';
 
 v_inf_in = v_sc_int - v_Triton_int;
-v_inf_in_mag = norm(v_inf_in);
+v_inf_in_mag = norm(v_inf_in)
 
 a_flyby = mu_T / v_inf_in_mag^2; 
 rp_flyby = R_T + 1000;
 %e_flyby = rp_flyby/a_flyby + 1;
-e_flyby = 1 + (rp_flyby * v_inf_in_mag^2) / mu_T; % tf????? 1047 ????
+e_flyby = 1 + ((rp_flyby * v_inf_in_mag^2) / mu_T) % tf????? 1047 ????
 delta_flyby = 2*asin(1/e_flyby);
 h_flyby = sqrt(rp_flyby * mu_T * (1 + e_flyby));
 
@@ -191,6 +191,17 @@ time_flyby_inst = find_time_flyby(R_T, h_flyby, e_flyby, a_flyby, mu_T, 50000)
 
 time_flyby_inst * 60
 
+%% instgrumetns around neptune 
+
+
+
+ra_test = norm(rp_return);    % then set this ra_main1 as rp_return at 180 deg  - then change to 1.2e5    
+rp_test = R_N + 10000;      % adjust  
+a_test = (rp_test + ra_test)/2;
+e_test = (ra_test - rp_test)/(ra_test + rp_test);
+h_test = sqrt(mu_N * rp_test * (1 + e_test));
+time_new = find_time_neptune(R_N, h_test, e_test, a_test, mu_N, 50000)
+
 
 
 %find theta for the perigeemain position then for the current flyby
@@ -229,8 +240,8 @@ epoch_after = int_epoch + time_taken / (3600 * 24);
 
 %% final orbit - hopefully?
 
-ra_final = 7e5;   
-rp_final = R_N + 2000;       
+ra_final = R_N + 4e4;   
+rp_final = R_N + 1500; % can be less but should be a bit less than 2000 km for maximum like max 1990 ish so atleast 2 mins for smallest instruemnt
 a_final = (rp_final + ra_final)/2;
 e_final = (ra_final - rp_final)/(ra_final + rp_final);
 h_final = sqrt(mu_N * rp_final * (1 + e_final));
@@ -243,7 +254,9 @@ omega_final = omega_main1;
 
 P_return = 2 * pi * a_final^(3/2) / (sqrt(mu_N))
 
+timememem = find_time_neptune(R_N, h_final, e_final, a_final, mu_N, 2000)
 
+save('ScienceOrbit','ra_final','rp_final','a_final','e_final','P_return')
 
 
 %
@@ -455,6 +468,43 @@ function [t] = find_time_flyby(R, h, e, a, mu, altitude)
 
 
 end 
+
+
+function [t] = find_time_neptune(R, h, e, a, mu, altitude)
+
+    r_need = R + altitude;  
+    % theta_need = acosd((h^2 / (mu*r_need) - 1)/e)
+    % 
+    % E_need = 2 * atan( sqrt((1-e)/(1+e)) * tand(theta_need/2) );
+
+    % Clamp cos(theta) to avoid NaNs due to floating point precision
+    cos_theta = (h^2 / (mu * r_need) - 1) / e;
+    cos_theta = max(-1, min(1, cos_theta));
+    theta_rad = acos(cos_theta);  % radians
+
+    % Eccentric anomaly (elliptical orbit)
+    E_need = 2 * atan( sqrt((1 - e)/(1 + e)) * tan(theta_rad / 2) );
+
+    M_need = E_need - e * sin(E_need);
+    if M_need < 0
+        M_need = M_need + 2*pi;
+    end
+    P_need = 2 * pi * sqrt(a^3 / mu);
+    T_need = M_need * P_need/(2*pi);
+    t = T_need * 2;
+    %t = t /(3600);
+
+
+end 
+
+
+
+    
+
+
+
+
+
 
 
 
