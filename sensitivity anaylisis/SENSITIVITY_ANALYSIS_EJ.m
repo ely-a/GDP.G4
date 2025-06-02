@@ -47,4 +47,8 @@ vp_variation = factor*k_vp;
 rp_error = rp_variation*0.0001*R2;
 vp_error = vp_variation*0.0001*R2;
 
+% B-plane stuff
+delta_R2 = 27*71492;
+delta_V = (delta_R2/R2)/(vp_variation/v_p)*1e3  % m/s
+
 
