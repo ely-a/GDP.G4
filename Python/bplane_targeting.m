@@ -1,4 +1,52 @@
-function result = bplane_targeting(r_sc_jup, v_sc_jup, mu_jup, thetaB_deg)
+clear all
+clc
+
+% approach conditions to neptune (heliocentric)
+r_sc_neptune = [3.7386e+09	2.2776e+09	8.3916e+08] - [3.7410e+09	2.2792e+09	8.3974e+08];
+v_sc_neptune = [12.3155	11.5601	4.4616] - [-2.3148    3.4722    1.8519];
+mu = 6.8365e6;
+v_inf_mag = 17.14;
+thetaB_deg = 0;
+result = bplane(r_sc_neptune, v_sc_neptune, mu, thetaB_deg);
+vinf_in = v_sc_neptune; % km/s
+
+% position and velocity of periapsis
+% vinf_mag = norm(vinf_in);  % Magnitude of incoming v_infinity [km/s]
+rp = result.rp_km;               % Periapsis radius [km]
+rp = 30000;
+delta = result.turn_angle_deg * pi/180;        % Turning angle [rad]
+
+% B-plane unit vectors
+S = result.S_hat; % Unit vector of incoming V_inf
+R = result.R_hat;
+T = result.T_hat;
+
+% B-vector (in the B-plane)
+B = result.B_vec;
+B_hat = B / norm(B);       % Normalize
+
+% Angular momentum direction
+h = cross(B, vinf_in, 2); 
+h_hat = h / norm(h);
+
+% Periapsis direction (unit vector)
+p_hat = cross(h_hat, S);
+
+% Periapsis position vector
+r_p_vec = rp * p_hat;
+
+% Velocity magnitude at periapsis
+vp_mag = sqrt(v_inf_mag^2 + 2 * mu / rp);
+
+% Periapsis velocity vector (perpendicular to r_p_vec in orbital plane)
+v_p_hat = cross(h_hat, p_hat);
+v_p_vec = vp_mag * v_p_hat;
+
+% --- Output ---
+fprintf('Periapsis position vector [km]: [%f, %f, %f]\n', r_p_vec);
+fprintf('Periapsis velocity vector [km/s]: [%f, %f, %f]\n', v_p_vec);
+
+function result = bplane(r_sc_neptune, v_sc_neptune, mu_neptune, thetaB_deg)
     % Inputs:
     % r_sc_jup     - Position vector of spacecraft relative to Jupiter [km]
     % v_sc_jup     - Velocity vector of spacecraft relative to Jupiter [km/s]
@@ -6,23 +54,23 @@ function result = bplane_targeting(r_sc_jup, v_sc_jup, mu_jup, thetaB_deg)
     % thetaB_deg   - Angle of B-vector in B-plane (from T̂ toward R̂) [degrees]
 
     % Compute v_inf vector (incoming relative velocity)
-    v_inf = v_sc_jup;
-    v_inf_mag = norm(v_inf);
+    v_inf = v_sc_neptune;
+    v_inf_mag = 17.14;
 
     % Define Ŝ = v_inf direction
     S_hat = v_inf / v_inf_mag;
 
     % Define R̂ = direction of h = r x v_inf
-    h_vec = cross(r_sc_jup, v_inf);
+    h_vec = cross(r_sc_neptune, v_sc_neptune);
     R_hat = h_vec / norm(h_vec);
 
     % Define T̂ = R̂ × Ŝ
     T_hat = cross(R_hat, S_hat);
 
     % Compute orbit parameters
-    h = norm(cross(r_sc_jup, v_inf));
-    a_hyp = -mu_jup / v_inf_mag^2;
-    e = 1 + h^2 / (a_hyp * mu_jup);
+    h = norm(h_vec);
+    a_hyp = -mu_neptune / v_inf_mag^2;
+    e = 1 + h^2 / (a_hyp * mu_neptune);
     rp = a_hyp * (e - 1);  % Periapsis radius [km]
     delta = 2 * asin(1 / e);  % Turn angle [rad]
     B_mag = rp * sqrt(e^2 - 1);  % Impact parameter [km]
@@ -35,7 +83,7 @@ function result = bplane_targeting(r_sc_jup, v_sc_jup, mu_jup, thetaB_deg)
     result.S_hat = S_hat;
     result.R_hat = R_hat;
     result.T_hat = T_hat;
-    result.B_vector = B_vector;
+    result.B_vec = B_vector;
     result.B_mag = B_mag;
     result.turn_angle_deg = rad2deg(delta);
     result.rp_km = rp;
