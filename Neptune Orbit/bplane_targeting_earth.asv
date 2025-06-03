@@ -2,7 +2,7 @@ clear all
 clc
 
 % Preallocate arrays for speed
-theta_array = linspace(0, 2*pi, 100);
+% theta_array = linspace(0, 2*pi, 100);
 num_angles = length(theta_array);
 oe_matrix = zeros(num_angles, 7); % Columns: h, e, RA, i, w, TA, a
 
@@ -11,7 +11,7 @@ for k = 1:num_angles
 
     % approach conditions to neptune (heliocentric)
     r_sc_earth = [-1.4868e8 -1.2094e7 -5.4385e6] - [-1.4922e8 -1.0510e7 -4.5364e6];
-    v_sc_earth = -[4.4412 -36.5465 -17.0892] + [1.567 -27.3629 -11.8613];
+    v_sc_earth = [4.4412 -36.5465 -17.0892] - [1.567 -27.3629 -11.8613];
     mu = 398600;
     v_inf_mag = 10.881197003;
     result = bplane(r_sc_earth, v_sc_earth, mu, thetaB_deg);
@@ -53,7 +53,7 @@ for k = 1:num_angles
     % fprintf('Periapsis position vector [km]: [%f, %f, %f]\n', r_p_vec);
     % fprintf('Periapsis velocity vector [km/s]: [%f, %f, %f]\n', v_p_vec);
     
-    dv_mag = 4;
+    dv_mag = 54;
     dv = dv_mag * v_p_vec / norm(v_p_vec);
     v_p_vec = v_p_vec - dv;
     oe = sv_2_oe(r_p_vec, v_p_vec, mu);
@@ -79,7 +79,7 @@ theta_array = rad2deg(theta_array);
 subplot(3,1,1)
 plot(theta_array, oe_matrix(:,4)) % Inclination
 xlabel('B-plane rotation angle [deg]')
-ylabel('i [deg]')
+ylabel('Inclination [deg]')
 title('Inclination vs B-plane Angle')
 grid on
 xlim([0 360])
@@ -87,7 +87,7 @@ xlim([0 360])
 subplot(3,1,2)
 plot(theta_array, oe_matrix(:,5)) % Eccentricity
 xlabel('B-plane rotation angle [deg]')
-ylabel('\omega [deg]')
+ylabel('RAAN [deg]')
 title('Argument of periapsis vs B-plane Angle')
 grid on
 xlim([0 360])
@@ -95,7 +95,7 @@ xlim([0 360])
 subplot(3,1,3)
 plot(theta_array, oe_matrix(:,3)) % RAAN
 xlabel('B-plane rotation angle [deg]')
-ylabel('\Omega [deg]')
+ylabel('RAAN [deg]')
 title('RAAN vs B-plane Angle')
 grid on
 xlim([0 360])
