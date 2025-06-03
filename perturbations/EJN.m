@@ -159,7 +159,7 @@ for time_elapsed = 0:1:0
         [V1, V2] = lambert2(r1, r2, tf, 0, mu);
         [r_leg, v_leg] = propagate_orbit(r1, V1, tf, mu);
         r_out = [r_out; r_leg];
-        v_out = [v_out; V1];
+        v_out = [v_out; v_leg];
         % relative velocity to calculate flyby parameters
         flyby_vlist = [flyby_vlist; V1-v1; V2-v2];
 
