@@ -3,7 +3,6 @@
 
 close all
 clc
-8
 t_start = juliandate(2032,3,23);
 t_end = t_start + 1e4;
 
@@ -68,6 +67,7 @@ dv_launch = sqrt(initial_v_inf^2 + 2 * mu_planets(sequence(1)) /...
     (initial_LEO_alt + r_planets(sequence(1))));
 for time_elapsed = 0:1:0
     r_out = zeros(1, 3);
+    v_out = zeros(1, 3);
     disp(strcat("Time past initial launch date: ", num2str(time_elapsed), " days"))
     failed = false;
     initial_t = time_elapsed;
@@ -157,8 +157,9 @@ for time_elapsed = 0:1:0
         v2 = (1 - alpha) * v2_lower + alpha * v2_upper;
         % propagation
         [V1, V2] = lambert2(r1, r2, tf, 0, mu);
-        r_leg = propagate_orbit(r1, V1, tf, mu);
+        [r_leg, v_leg] = propagate_orbit(r1, V1, tf, mu);
         r_out = [r_out; r_leg];
+        v_out = [v_out; v_leg];
         % relative velocity to calculate flyby parameters
         flyby_vlist = [flyby_vlist; V1-v1; V2-v2];
 
@@ -286,7 +287,7 @@ end
 
 
 % for plotting only
-function r_out = propagate_orbit(r1, v1, tf, mu)
+function [r_out, v_out] = propagate_orbit(r1, v1, tf, mu)
     % Inputs:
     % r1 - 3x1 position vector (km)
     % v1 - 3x1 velocity vector (km/s)
@@ -314,6 +315,7 @@ function r_out = propagate_orbit(r1, v1, tf, mu)
 
     % Extract position vectors
     r_out = Y(:, 1:3);
+    v_out = Y(:, 4:6);
 end
 
 
