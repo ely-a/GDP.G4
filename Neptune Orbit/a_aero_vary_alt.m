@@ -30,9 +30,6 @@ vp_cap = sqrt(2 * mu_N/rp_cap);       % km/s
 i_cap = 23.2; RAAN_cap = 10; omega_cap = 115;
 [rp_cap_vec, vp_cap_vec] = rv_parabolic(rp_cap, vp_cap, i_cap, RAAN_cap, omega_cap);
 
-%% === LOAD SCIENCE ORBIT ===
-load("ScienceOrbit.mat")
-
 %% === APPLY INITIAL Δv AT PERIAPSIS (TO CREATE ELLIPTICAL ORBIT) ===
 dv_init = 0.22;                               % km/s
 vp_init = vp_cap - dv_init;
@@ -244,13 +241,13 @@ max_atm_r = r_N + alts(end);
 
 % Compute Δv lost and orbital elements and heat shield per pass
 delta_vs = zeros(1, N); 
-eccs = zeros(1, N); incs = zeros(1, N); RAANs = zeros(1, N); omegas = zeros(1, N);
+as=zeros(1,N); eccs = zeros(1, N); incs = zeros(1, N); RAANs = zeros(1, N); omegas = zeros(1, N);
 m_TPS_vec = zeros(1, N); t_TPS_cm_vec = zeros(1, N);
 
 for i = 1:N
-    [as, eccs(i), hs, incs(i), RAANs(i), omegas(i), ~] = oe_from_rv(Y_out(exit_idx(i), 1:3)', Y_out(exit_idx(i), 4:6)', mu_N);
+    [as(i), eccs(i), hs, incs(i), RAANs(i), omegas(i), ~] = oe_from_rv(Y_out(exit_idx(i), 1:3)', Y_out(exit_idx(i), 4:6)', mu_N);
     theta_exit = acosd(((hs^2 / (mu_N*max_atm_r)) - 1)/eccs(i));
-    [~, v_exit] = rv_from_oe(as, eccs(i), incs(i), RAANs(i), omegas(i), theta_exit, mu_N);
+    [~, v_exit] = rv_from_oe(as(i), eccs(i), incs(i), RAANs(i), omegas(i), theta_exit, mu_N);
     v_exit = norm(v_exit);
     
     [a_entry, ecc_entry, h_entry, inc_entry, RAAN_entry, omega_entry, ~] = oe_from_rv(Y_out(entry_idx(i), 1:3)', Y_out(entry_idx(i), 4:6)', mu_N);
@@ -283,6 +280,16 @@ end
 t_days = t_out(end)/(24 * 3600);
 fprintf('Number of atmosphere entries: %d\n', N);
 fprintf('Time taken: %.2f days \n', t_days);
+
+%% === SAVE OE VARIATION ===
+
+a_brakes = [a_brake, as];
+e_brakes = [e_brake, eccs];
+i_brakes = [i_brake, incs];
+RAAN_brakes = [RAAN_brake, RAANs];
+omega_brakes = [omega_brake, omegas];
+
+save("Aerobrakes_OE.mat", "a_brakes", "omega_brakes", "RAAN_brakes", "i_brakes", "e_brakes")
 
 %% === PLOT TRAJECTORY IN 3D ===
 r_vecs = Y_out(:, 1:3)';
@@ -386,7 +393,7 @@ v_final = Y_out(end,4:6)';
 
 % Current apogee radius
 ra_curr = a_curr * (1 + e_curr);
-
+rp_final = 2.620767634816547e+04;
 % Required eccentricity for desired periapsis
 e_req = (ra_curr - rp_final) / (ra_curr + rp_final);
 
@@ -452,7 +459,7 @@ function [value, isterminal, direction] = stop_when_reached_science(~, Y, mu)
 
     % Condition 1: e < 0.42 and at apogee
     cond1 = e - 0.42;
-    cond2 = abs(mod(theta,360) - 180) - 2;
+    cond2 = abs(mod(theta,360) - 180) - 1;
     event1 = max([cond1, cond2]); % triggers when both < 0
 
     % Condition 2: collision with Neptune (r <= r_N)
