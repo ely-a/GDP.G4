@@ -100,7 +100,7 @@ for h_pe = 1.3e5:1e2:2e5 % plot_h:plot_h
         rho = interp1(heights, rho_vals, h);
     
         % drag
-        a_drag = -0.5 * rho * v * norm(v) / beta;
+        a_drag = -0.5 * rho * v * norm(v) / beta
     
         % Total acceleration
         a = a_grav + a_drag;
