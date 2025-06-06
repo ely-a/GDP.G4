@@ -106,18 +106,18 @@ end
 figure;
 plot3(r_sc(:, 1), r_sc(:, 2), r_sc(:, 3), 'b', 'LineWidth', 1.5);
 hold on;
-plot3(big_rv_propagated(:,1), big_rv_propagated(:,2), big_rv_propagated(:,3), 'r', 'LineWidth', 1.5);
+plot3(big_rv_propagated(:,1), big_rv_propagated(:,2), big_rv_propagated(:,3), 'r--', 'LineWidth', 1.5);
 scatter3(r_sc(tcm_list,1), ...
     r_sc(tcm_list,2), ...
     r_sc(tcm_list,3), 'kx', 'LineWidth', 1.5)
 scatter3(targets(:, 1), targets(:, 2), targets(:, 3), 'go', 'filled')
-legend('Original r_{sc}', 'Propagated (n-body)');
+legend('Unperturbed trajectory', 'Perturbed trajectory');
 xlabel('X (km)');
 ylabel('Y (km)');
 zlabel('Z (km)');
 grid on;
 axis equal;
-title('Spacecraft Orbit Propagation (N-body vs Original)');
+%title('Spacecraft Orbit Propagation (N-body vs Original)');
 set(gca, 'Clipping', 'off');
 
 figure
