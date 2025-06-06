@@ -37,7 +37,8 @@ S0  = 63.15e6;           % surface radiated power intensity (W/m^2)
 R_S  = 696340;           % radius of the Sun (km)
 R    = 3;                % radius of spacecraft (m)
 C_R  = 1.25;             % radiation pressure coefficient (1–2)
-m    = 21115;            % mass of spacecraft (orbiter + cruise stage)
+m = 1740 + 140 + 21115;           % mass of spacecraft (orbiterx2 + cruise stage)
+m = 42500;
 v    = zeros(n, 7);      % shadow function, size n×7
 A_s  = pi * R^2;         % cross-sectional area of spacecraft (m^2)
 
@@ -105,18 +106,18 @@ end
 figure;
 plot3(r_sc(:, 1), r_sc(:, 2), r_sc(:, 3), 'b', 'LineWidth', 1.5);
 hold on;
-plot3(big_rv_propagated(:,1), big_rv_propagated(:,2), big_rv_propagated(:,3), 'r', 'LineWidth', 1.5);
-scatter3(r_sc(tcm_list,1), ...
-    r_sc(tcm_list,2), ...
-    r_sc(tcm_list,3), 'kx', 'LineWidth', 1.5)
+plot3(big_rv_propagated(:,1), big_rv_propagated(:,2), big_rv_propagated(:,3), 'r--', 'LineWidth', 1.5);
+% scatter3(r_sc(tcm_list,1), ...
+%     r_sc(tcm_list,2), ...
+%     r_sc(tcm_list,3), 'kx', 'LineWidth', 1.5)
 scatter3(targets(:, 1), targets(:, 2), targets(:, 3), 'go', 'filled')
-legend('Original r_{sc}', 'Propagated (n-body)');
+legend('Unperturbed trajectory', 'Perturbed trajectory',"Correction maneuver applied");
 xlabel('X (km)');
 ylabel('Y (km)');
 zlabel('Z (km)');
 grid on;
 axis equal;
-title('Spacecraft Orbit Propagation (N-body vs Original)');
+%title('Spacecraft Orbit Propagation (N-body vs Original)');
 set(gca, 'Clipping', 'off');
 
 figure
