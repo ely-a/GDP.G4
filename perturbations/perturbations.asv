@@ -37,7 +37,7 @@ S0  = 63.15e6;           % surface radiated power intensity (W/m^2)
 R_S  = 696340;           % radius of the Sun (km)
 R    = 3;                % radius of spacecraft (m)
 C_R  = 1.25;             % radiation pressure coefficient (1–2)
-m    = 42500;            % mass of spacecraft (kg)
+m    = 21115;            % mass of spacecraft (orbiter + cruise stage)
 v    = zeros(n, 7);      % shadow function, size n×7
 A_s  = pi * R^2;         % cross-sectional area of spacecraft (m^2)
 
@@ -59,6 +59,8 @@ time_elapsed = 0;
 dv_total = 0;
 big_rv_propagated = [r1' v1'];
 dv_list = [];
+tcm_list = [];
+targets = [];
 
 % Call n-body propagator
 while time_elapsed < n
@@ -66,12 +68,14 @@ while time_elapsed < n
     if tf_days == 0
         break
     end
-    if time_elap
+    if 465 - time_elapsed < tcm_interval && time_elapsed < 465
+        tf_days = 465 - time_elapsed;
+    end
     rv_propagated = propagate_orbit_nbody(r1, v1, tf_days, mu_sun, mu_planets, r_planets,radius,S0,R_S,c,C_R,A_s,m);
     r1 = rv_propagated(end, 1:3);
     v1 = rv_propagated(end, 4:6);
     big_rv_propagated = [big_rv_propagated; rv_propagated];
-    time_elapsed = time_elapsed + tf_days;
+    tcm_list = [tcm_list time_elapsed + 1];
 
     % test
     % correction_vector = r_sc(time_elapsed, :) - r1; % vector in correction direction
@@ -80,11 +84,20 @@ while time_elapsed < n
     % v1 = v1 + dv;
 
     % lambert solver test
-    endpos = r_sc(min(n, time_elapsed + tf_days), :);
-    [V1, ~] = lambert2(r1, endpos, tf_days, 0, mu_sun);
+    time_elapsed = time_elapsed + tf_days;
+    if 466 - time_elapsed < tcm_interval && time_elapsed < 465
+        tf_days2 = 465 - time_elapsed;
+    else
+        tf_days2 = tcm_interval;
+    end
+    endpos = r_sc(min(n, time_elapsed + tf_days2), :);
+    targets = [targets; endpos];
+    [V1, ~] = lambert2(r1, endpos, tf_days2, 0, mu_sun);
     dv = (V1 - v1);
-    dv_total = dv_total + norm(dv);
-    dv_list = [dv_list; dv];
+    if norm(dv) < 0.1
+        dv_total = dv_total + norm(dv);
+        dv_list = [dv_list; dv];
+    end
     v1 = v1 + dv;
 end
 
@@ -93,9 +106,10 @@ figure;
 plot3(r_sc(:, 1), r_sc(:, 2), r_sc(:, 3), 'b', 'LineWidth', 1.5);
 hold on;
 plot3(big_rv_propagated(:,1), big_rv_propagated(:,2), big_rv_propagated(:,3), 'r', 'LineWidth', 1.5);
-scatter3(r_sc(1:tcm_interval:end,1), ...
-    r_sc(1:tcm_interval:end,2), ...
-    r_sc(1:tcm_interval:end,3), 'g', 'LineWidth', 1.5)
+scatter3(r_sc(tcm_list,1), ...
+    r_sc(tcm_list,2), ...
+    r_sc(tcm_list,3), 'kx', 'LineWidth', 1.5)
+scatter3(targets(:, 1), targets(:, 2), targets(:, 3), 'go', 'filled')
 legend('Original r_{sc}', 'Propagated (n-body)');
 xlabel('X (km)');
 ylabel('Y (km)');
