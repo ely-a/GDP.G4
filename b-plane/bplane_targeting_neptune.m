@@ -79,22 +79,25 @@ theta_array = rad2deg(theta_array);
 subplot(3,1,1)
 plot(theta_array, oe_matrix(:,4)) % Inclination
 xlabel('B-plane rotation angle [deg]')
-ylabel('Inclination [deg]')
+ylabel('i [deg]')
 title('Inclination vs B-plane Angle')
+xlim([0 360])
 grid on
 
 subplot(3,1,2)
 plot(theta_array, oe_matrix(:,5)) % Eccentricity
 xlabel('B-plane rotation angle [deg]')
-ylabel('RAAN [deg]')
+ylabel('\omega [deg]')
 title('Argument of periapsis vs B-plane Angle')
+xlim([0 360])
 grid on
 
 subplot(3,1,3)
 plot(theta_array, oe_matrix(:,3)) % RAAN
 xlabel('B-plane rotation angle [deg]')
-ylabel('RAAN [deg]')
+ylabel('\Omega [deg]')
 title('RAAN vs B-plane Angle')
+xlim([0 360])
 grid on
 
 function result = bplane(r_sc_neptune, v_sc_neptune, mu_neptune, thetaB_deg)
