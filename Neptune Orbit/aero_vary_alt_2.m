@@ -12,43 +12,43 @@ C_D_nom = 1.15;
 A = pi * 2.5^2;          % m^2
 m = 1800e6;              % kg
 beta_nom = m / (C_D_nom * A);
-alt_entry_nominal = 540; % km
+alt_entry_nominal = 544; % km
 
 % Build interpolant functions for nominal run
 atmos_nom = @(alt_km) interp1(alt_steps, rho_mean * 1e9, alt_km, 'linear', 0); % kg/km^3
 zonal_nom = @(alt_km) interp1(alt_steps, ew_mean/1000, alt_km, 'linear', 0);   % km/s
 merid_nom = @(alt_km) interp1(alt_steps, ns_mean/1000, alt_km, 'linear', 0);   % km/s
 
-% % --- Sweep over periapsis altitudes ---
-% alt_range = 500:60:560; % Example range in km
-% max_m_TPS = zeros(size(alt_range));
-% time_taken_days = zeros(size(alt_range));
-% num_passes_vec = zeros(size(alt_range));
-% 
-% for j = 1:length(alt_range)
-%     alt_entry = alt_range(j);
-%     fprintf('Running for periapsis altitude: %d km (%d of %d)\n', alt_entry, j, length(alt_range));
-%     [m_TPS_vec, ~, t_days, num_passes, ~] = run_aerobrake_nominal(atmos_nom, zonal_nom, merid_nom, beta_nom, alt_entry, mu_N, r_N, r_N_equ);
-%     max_m_TPS(j) = max(m_TPS_vec);
-%     time_taken_days(j) = t_days;
-%     num_passes_vec(j) = num_passes;
-% end
-% 
-% % --- Plot results ---
-% figure;
-% subplot(2,1,1)
-% plot(alt_range, max_m_TPS, '-o', 'LineWidth', 2);
-% xlabel('Periapsis Altitude (km)');
-% ylabel('Max Heat Shield Mass (kg)');
-% title('Max Heat Shield Mass vs Periapsis Altitude');
-% grid on;
-% 
-% subplot(2,1,2)
-% plot(alt_range, time_taken_days, '-o', 'LineWidth', 2);
-% xlabel('Periapsis Altitude (km)');
-% ylabel('Time to Science Orbit (days)');
-% title('Time to Science Orbit vs Periapsis Altitude');
-% grid on;
+% --- Sweep over periapsis altitudes ---
+alt_range = 530:1:550; % Example range in km
+max_m_TPS = zeros(size(alt_range));
+time_taken_days = zeros(size(alt_range));
+num_passes_vec = zeros(size(alt_range));
+
+for j = 1:length(alt_range)
+    alt_entry = alt_range(j);
+    fprintf('Running for periapsis altitude: %d km (%d of %d)\n', alt_entry, j, length(alt_range));
+    [m_TPS_vec, ~, t_days, num_passes, ~] = run_aerobrake_nominal(atmos_nom, zonal_nom, merid_nom, beta_nom, alt_entry, mu_N, r_N, r_N_equ);
+    max_m_TPS(j) = max(m_TPS_vec);
+    time_taken_days(j) = t_days;
+    num_passes_vec(j) = num_passes;
+end
+
+% --- Plot results ---
+figure;
+subplot(2,1,1)
+plot(alt_range, max_m_TPS, '-o', 'LineWidth', 2);
+xlabel('Periapsis Altitude (km)');
+ylabel('Max Heat Shield Mass (kg)');
+title('Max Heat Shield Mass vs Periapsis Altitude');
+grid on;
+
+subplot(2,1,2)
+plot(alt_range, time_taken_days, '-o', 'LineWidth', 2);
+xlabel('Periapsis Altitude (km)');
+ylabel('Time to Science Orbit (days)');
+title('Time to Science Orbit vs Periapsis Altitude');
+grid on;
 
 %% Run the nominal aerobrake simulation
 [m_TPS_vec, t_TPS_cm_vec, t_days, num_passes, Y_out] = run_aerobrake_nominal(atmos_nom, zonal_nom, merid_nom, beta_nom, alt_entry_nominal, mu_N, r_N, r_N_equ);
@@ -170,18 +170,16 @@ fprintf('Required delta-v at apoapsis:         %.4f m/s\n', delta_v_apogee*1000)
 % Optionally, update the velocity vector for the new orbit:
 v_final_after_impulse = v_final + (delta_v_apogee / norm(v_final)) * v_final;
 
-[a_final, e_final, h_final, i_final, RAAN_final, omega_final, ~] = oe_from_rv(r_final, v_final_after_impulse, mu_N)
+[a_final, e_final, h_final, i_final, RAAN_final, omega_final, ~] = oe_from_rv(r_final, v_final_after_impulse, mu_N);
 
 save("ScienceOrbit.mat", "a_final", "e_final", "h_final", "i_final", "RAAN_final", "omega_final", "t_days")
-
-
 %% === Helper function: run_aerobrake_nominal ===
 function [m_TPS_vec, t_TPS_cm_vec, t_days, num_passes, Y_out] = run_aerobrake_nominal(atmos, zonal, merid, beta, alt_entry, mu_N, r_N, r_N_equ)
     % Initial orbit setup
     alt_cap = 10000;                      % km above surface
     rp_cap = alt_cap + r_N;
     vp_cap = sqrt(2 * mu_N/rp_cap);       % km/s
-    i_cap = 65; RAAN_cap = 15; omega_cap = 102;
+    i_cap = 65; RAAN_cap = 24.8; omega_cap = 99.8;
     [rp_cap_vec, vp_cap_vec] = rv_parabolic(rp_cap, vp_cap, i_cap, RAAN_cap, omega_cap);
 
     dv_init = 0.22;                               % km/s

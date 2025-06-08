@@ -4,7 +4,7 @@
 clear; clc; close all
 
 %% === SETTINGS ===
-N_MC = 5z000; % Number of Monte Carlo runs
+N_MC = 10000; % Number of Monte Carlo runs
 
 % Load atmospheric and wind statistics
 load("gram_profiles.mat"); % rho_mean, rho_std, ew_mean, ew_std, ns_mean, ns_std, alt_steps
@@ -14,22 +14,24 @@ mu_N = 6.8351e6;         % km^3/s^2
 r_N = 24622;             % km (mean radius)
 r_N_equ = 24764;         % km (equatorial radius)
 C_D_nom = 1.15; % or your nominal value
-C_D_std = 0.05 * C_D_nom;
+C_D_std = 0.1 * C_D_nom;
 A = pi * 2.5^2; % m^2, or your reference area
 m = 1800e6;     % kg, or your nominal mass
-alt_entry_nominal = 539;                   % km, as in your script
+alt_entry_nominal = 544;                   % km, as in your script
 alt_entry_std = 5;                         % km, 1-sigma
 
 % New: Standard deviations for orbital elements
-i_cap_nom = 65; i_cap_std = 3;             % deg
-RAAN_cap_nom = 15; RAAN_cap_std = 1;       % deg
-omega_cap_nom = 102; omega_cap_std = 1;    % deg
+i_cap_nom = 65.0; i_cap_std = 0.5;             % deg
+RAAN_cap_nom = 24.8; RAAN_cap_std = 0.05;       % deg
+omega_cap_nom = 99.8; omega_cap_std = 0.1;    % deg
 
 % Preallocate results
 max_m_TPS = zeros(N_MC,1);
 max_t_TPS = zeros(N_MC,1);
 time_taken_days = zeros(N_MC,1);
 num_passes = zeros(N_MC,1);
+min_m_TPS = zeros(N_MC,1);
+min_t_TPS = zeros(N_MC,1);
 
 n_failed = 0;
 
@@ -60,12 +62,16 @@ for mc = 1:N_MC
         max_t_TPS(mc) = max(t_TPS_cm_vec);
         time_taken_days(mc) = t_days;
         num_passes(mc) = pass;
+        min_m_TPS(mc) = min(m_TPS_vec);
+        min_t_TPS(mc) = min(t_TPS_cm_vec);
     catch
         max_m_TPS(mc) = NaN;
         max_t_TPS(mc) = NaN;
         time_taken_days(mc) = NaN;
         num_passes(mc) = NaN;
         n_failed = n_failed + 1;
+        min_m_TPS(mc) = NaN;
+        min_t_TPS(mc) = NaN;
         fprintf('MC run %d FAILED\n', mc);
     end
     fprintf('Completed MC run %d of %d\n', mc, N_MC);
@@ -75,48 +81,112 @@ fprintf('Total failed MC runs: %d out of %d\n', n_failed, N_MC);
 % Remove failed runs
 max_m_TPS = max_m_TPS(~isnan(max_m_TPS));
 max_t_TPS = max_t_TPS(~isnan(max_t_TPS));
-
-%% === Plot Results ===
-
-figure;
-histogram(max_m_TPS, 20, 'FaceColor', [0.2 0.6 1]);
-xlabel('Maximum Heat Shield Mass per MC Run (kg)');
-ylabel('Count');
-title('Monte Carlo: Maximum Heat Shield Mass Distribution');
-grid on;
-
-figure;
-histogram(max_t_TPS, 20, 'FaceColor', [1 0.6 0.2]);
-xlabel('Maximum Heat Shield Thickness per MC Run (cm)');
-ylabel('Count');
-title('Monte Carlo: Maximum Heat Shield Thickness Distribution');
-grid on;
-
-% Remove failed runs for all outputs
+min_m_TPS = min_m_TPS(~isnan(min_m_TPS));
+min_t_TPS = min_t_TPS(~isnan(min_t_TPS));
 valid = ~isnan(max_m_TPS) & ~isnan(time_taken_days) & ~isnan(num_passes);
 time_taken_days = time_taken_days(valid);
 num_passes = num_passes(valid);
 
+
+%% === Plot Results ===
+
+% Plot histogram for max heat shield mass
+figure;
+histogram(max_m_TPS, 25, 'FaceColor', [0.2 0.6 1], 'Normalization', 'pdf');
+xlabel('Maximum Heat Shield Mass per MC Run (kg)');
+ylabel('Probability Density');
+title('Monte Carlo: Maximum Heat Shield Mass Distribution');
+grid on;
+hold on;
+pd1 = fitdist(max_m_TPS, 'Normal');
+x1 = linspace(min(max_m_TPS), max(max_m_TPS), 100);
+y1 = normpdf(x1, pd1.mu, pd1.sigma);
+plot(x1, y1, 'r-', 'LineWidth', 2);
+legend('Histogram', 'Normal Fit');
+hold off;
+
+% Plot histogram for max heat shield thickness
+figure;
+histogram(max_t_TPS, 25, 'FaceColor', [1 0.6 0.2], 'Normalization', 'pdf');
+xlabel('Maximum Heat Shield Thickness per MC Run (cm)');
+ylabel('Probability Density');
+title('Monte Carlo: Maximum Heat Shield Thickness Distribution');
+grid on;
+hold on;
+pd2 = fitdist(max_t_TPS, 'Normal');
+x2 = linspace(min(max_t_TPS), max(max_t_TPS), 100);
+y2 = normpdf(x2, pd2.mu, pd2.sigma);
+plot(x2, y2, 'r-', 'LineWidth', 2);
+legend('Histogram', 'Normal Fit');
+hold off;
+
 % Plot histogram for time taken (days)
 figure;
-histogram(time_taken_days, 10, 'FaceColor', [0.3 0.7 0.3]);
+histogram(time_taken_days, 25, 'FaceColor', [0.3 0.7 0.3], 'Normalization', 'pdf');
 xlabel('Time Taken (days)');
-ylabel('Count');
+ylabel('Probability Density');
 title('Monte Carlo: Time Taken Distribution');
 grid on;
+hold on;
+pd3 = fitdist(time_taken_days, 'Normal');
+x3 = linspace(min(time_taken_days), max(time_taken_days), 100);
+y3 = normpdf(x3, pd3.mu, pd3.sigma);
+plot(x3, y3, 'r-', 'LineWidth', 2);
+legend('Histogram', 'Normal Fit');
+hold off;
 
 % Plot histogram for number of passes
 figure;
-histogram(num_passes, 'FaceColor', [0.7 0.3 0.7]);
+histogram(num_passes, 25, 'FaceColor', [0.7 0.3 0.7], 'Normalization', 'pdf');
 xlabel('Number of Passes');
-ylabel('Count');
+ylabel('Probability Density');
 title('Monte Carlo: Number of Passes Distribution');
 grid on;
+hold on;
+pd4 = fitdist(num_passes, 'Normal');
+x4 = linspace(min(num_passes), max(num_passes), 100);
+y4 = normpdf(x4, pd4.mu, pd4.sigma);
+plot(x4, y4, 'r-', 'LineWidth', 2);
+legend('Histogram', 'Normal Fit');
+hold off;
 
-fprintf('Mean max heat shield mass: %.2f kg\n', mean(max_m_TPS));
-fprintf('99th percentile mass: %.2f kg\n', prctile(max_m_TPS,99));
-fprintf('Mean max thickness: %.2f cm\n', mean(max_t_TPS));
-fprintf('99th percentile thickness: %.2f cm\n', prctile(max_t_TPS,99));
+% Plot histogram for min heat shield mass
+figure;
+histogram(min_m_TPS, 25, 'FaceColor', [0.2 0.3 0.8], 'Normalization', 'pdf');
+xlabel('Minimum Heat Shield Mass per MC Run (kg)');
+ylabel('Probability Density');
+title('Monte Carlo: Minimum Heat Shield Mass Distribution');
+grid on;
+hold on;
+pd_min1 = fitdist(min_m_TPS, 'Normal');
+x_min1 = linspace(min(min_m_TPS), max(min_m_TPS), 100);
+y_min1 = normpdf(x_min1, pd_min1.mu, pd_min1.sigma);
+plot(x_min1, y_min1, 'r-', 'LineWidth', 2);
+legend('Histogram', 'Normal Fit');
+hold off;
+
+% Plot histogram for min heat shield thickness
+figure;
+histogram(min_t_TPS, 25, 'FaceColor', [0.8 0.5 0.2], 'Normalization', 'pdf');
+xlabel('Minimum Heat Shield Thickness per MC Run (cm)');
+ylabel('Probability Density');
+title('Monte Carlo: Minimum Heat Shield Thickness Distribution');
+grid on;
+hold on;
+pd_min2 = fitdist(min_t_TPS, 'Normal');
+x_min2 = linspace(min(min_t_TPS), max(min_t_TPS), 100);
+y_min2 = normpdf(x_min2, pd_min2.mu, pd_min2.sigma);
+plot(x_min2, y_min2, 'r-', 'LineWidth', 2);
+legend('Histogram', 'Normal Fit');
+hold off;
+
+fprintf('\n--- Monte Carlo Statistics ---\n');
+fprintf('Max heat shield mass:      Mean = %.2f kg, 99th percentile = %.2f kg\n', mean(max_m_TPS), prctile(max_m_TPS,99));
+fprintf('Max heat shield thickness: Mean = %.2f cm, 99th percentile = %.2f cm\n', mean(max_t_TPS), prctile(max_t_TPS,99));
+fprintf('Min heat shield mass:      Mean = %.2f kg, 99th percentile = %.2f kg\n', mean(min_m_TPS), prctile(min_m_TPS,99));
+fprintf('Min heat shield thickness: Mean = %.2f cm, 99th percentile = %.2f cm\n', mean(min_t_TPS), prctile(min_t_TPS,99));
+fprintf('Time taken:                Mean = %.2f days, 99th percentile = %.2f days\n', mean(time_taken_days), prctile(time_taken_days,99));
+fprintf('Number of passes:          Mean = %.2f, 99th percentile = %.2f\n', mean(num_passes), prctile(num_passes,99));
 
 %% === Helper function: run_aerobrake_sim ===
 function [m_TPS_vec, t_TPS_cm_vec, t_days, num_passes] = run_aerobrake_sim(atmos, zonal, merid, beta, alt_entry, mu_N, r_N, r_N_equ, i_cap, RAAN_cap, omega_cap)
