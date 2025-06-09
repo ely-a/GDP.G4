@@ -16,11 +16,16 @@ m_N = 102.409e24;        % kg
 r_N = 24622;             % km (mean radius)
 r_N_equ = 24764;         % km (equatorial radius)
 
-%% === LOAD ATMOSPHERIC DENSITY MODEL ===
-density_data = readmatrix("densitymodel.txt");
-rhos = density_data(:, 1) * 1e9;      % Convert to kg/km^3
-alts = density_data(:, 2) / 1e3;      % Convert to km
-atmos = @(alt_km) interp1(alts, rhos, alt_km, 'linear', 0);  % Interpolation function
+%% === LOAD ATMOSPHERIC DENSITY AND WIND MODELS ===
+load("gram_profiles.mat") % provides rho_mean, ew_mean, ns_mean, alt_steps
+rhos = rho_mean * 1e9;
+alts = alt_steps';
+atmos = @(alt_km) interp1(alts, rhos, alt_km, 'linear', 0);
+
+winds_EW = ew_mean/1000; % km/s
+winds_NS = ns_mean/1000; % km/s
+zonal_model = @(alt_km) interp1(alts, winds_EW, alt_km, 'linear', 0);
+meridional_model = @(alt_km) interp1(alts, winds_NS, alt_km, 'linear', 0);
 
 %% === INITIAL PARABOLIC ORBIT ===
 alt_cap = 10000;                      % km above surface
@@ -40,21 +45,21 @@ vp_init_vec = vp_cap_vec * (1 - dv_init/vp_cap);
 ra_init = norm(ra_init_vec);
 va_init = norm(va_init_vec);
 
-%% === ANIMATE ORBIT FROM PERIAPSIS TO APOAPASIS OF FIRST ELLIPTICAL ROBIT%
-% Initial state at periapsis after capture
-Y0_peri = [rp_init_vec; vp_init_vec];
-
-% Event function to stop at apogee (theta = 180 deg)
-opts_apogee = odeset('RelTol',1e-9, 'AbsTol',1e-9, ...
-    'Events', @(t, Y) apogee_event(t, Y, mu_N));
-
-[t1, Y1] = ode113(@(t, Y) eom_perturbed(t, Y, mu_N, r_N, r_N_equ, atmos, ["drag"]), ...
-    [0, 1e7], Y0_peri, opts_apogee);
-
-r_vecs1 = Y1(:,1:3); % First segment: periapsis to apogee
-
-%% Vary altitude to compare number of passes and time taken
-% alt_range = 470:1:570; % km
+% %% === ANIMATE ORBIT FROM PERIAPSIS TO APOAPASIS OF FIRST ELLIPTICAL ORBIT ===
+% % Initial state at periapsis after capture
+% Y0_peri = [rp_init_vec; vp_init_vec];
+% 
+% % Event function to stop at apogee (theta = 180 deg)
+% opts_apogee = odeset('RelTol',1e-9, 'AbsTol',1e-9, ...
+%     'Events', @(t, Y) apogee_event(t, Y, mu_N));
+% 
+% [t1, Y1] = ode113(@(t, Y) eom_perturbed(t, Y, mu_N, r_N, r_N_equ, atmos, zonal_model, meridional_model, ["drag"]), ...
+%     [0, 1e7], Y0_peri, opts_apogee);
+% 
+% r_vecs1 = Y1(:,1:3); % First segment: periapsis to apogee
+% 
+% % Vary altitude to compare number of passes and time taken
+% alt_range = 550:5:550; % km
 % num_passes = zeros(size(alt_range));
 % time_taken = zeros(size(alt_range));
 % max_m_TPS = zeros(size(alt_range));
@@ -78,7 +83,7 @@ r_vecs1 = Y1(:,1:3); % First segment: periapsis to apogee
 %     opts = odeset('RelTol',1e-9, 'AbsTol',1e-9, ...
 %                   'Events', @(t, Y) stop_when_reached_science(t, Y, mu_N));
 % 
-%     [t_out_loop, Y_out_loop] = ode113(@(t, Y) eom_perturbed(t, Y, mu_N, r_N, r_N_equ, atmos, ["drag"]), ...
+%     [t_out_loop, Y_out_loop] = ode113(@(t, Y) eom_perturbed(t, Y, mu_N, r_N, r_N_equ, atmos, zonal_model, meridional_model, ["drag"]), ...
 %                                 [0, 1 * 365.25 * 86400], Y0_loop, opts);
 % 
 %     % Count passes
@@ -91,44 +96,52 @@ r_vecs1 = Y1(:,1:3); % First segment: periapsis to apogee
 %     time_taken(j) = t_out_loop(end)/(24*3600); % convert to days
 % 
 %     % Initialize max values for this altitude
-%     max_m = 0;
-%     max_t = 0;
+%     max_m = NaN;
+%     max_t = NaN;
 % 
-%     for i = 1:num_passes(j)
-%         idx_entry = entry_idx_loop(i)+1; % first entry within atmosphere
-%         idx_exit = exit_idx_loop(i)-1;   % last point within atmosphere
+%     if num_passes(j) > 0
+%         max_m = 0;
+%         max_t = 0;
+%         for i = 1:num_passes(j)
+%             idx_entry = entry_idx_loop(i)+1; % first entry within atmosphere
+%             idx_exit = exit_idx_loop(i)-1;   % last point within atmosphere
 % 
-%         % Extract profiles within the atmosphere for this pass
-%         t_pass = t_out_loop(idx_entry:idx_exit) - t_out_loop(idx_entry); % seconds, start from 0
-%         alt_pass = altitudes_loop(idx_entry:idx_exit);                   % km
-%         v_pass = vecnorm(Y_out_loop(idx_entry:idx_exit,4:6),2,2);        % km/s
+%             % Check for valid indices
+%             if idx_exit <= idx_entry || idx_entry < 1 || idx_exit > length(t_out_loop)
+%                 continue
+%             end
 % 
-%         % Call HeatShieldMass
-%         [m_TPS, t_TPS_cm] = HeatShieldMass(alt_pass, v_pass, t_pass);
+%             % Extract profiles within the atmosphere for this pass
+%             t_pass = t_out_loop(idx_entry:idx_exit) - t_out_loop(idx_entry); % seconds, start from 0
+%             alt_pass = altitudes_loop(idx_entry:idx_exit);                   % km
+%             v_pass = vecnorm(Y_out_loop(idx_entry:idx_exit,4:6),2,2);        % km/s
 % 
-%         % Update max if this pass is greater
-%         if m_TPS > max_m
-%             max_m = m_TPS;
-%         end
-%         if t_TPS_cm > max_t
-%             max_t = t_TPS_cm;
+%             % Call HeatShieldMass
+%             [m_TPS, t_TPS_cm] = HeatShieldMass(alt_pass, v_pass, t_pass);
+% 
+%             % Update max if this pass is greater
+%             if m_TPS > max_m || isnan(max_m)
+%                 max_m = m_TPS;
+%             end
+%             if t_TPS_cm > max_t || isnan(max_t)
+%                 max_t = t_TPS_cm;
+%             end
 %         end
 %     end
 % 
 %     max_m_TPS(j) = max_m;
 %     max_t_TPS_cm(j) = max_t;
 % end
-
-%% Altitude variation plots 
-
-% figure;
-% subplot(2,1,1)
-% plot(alt_range, num_passes, '-', 'LineWidth', 2)
-% xlabel('Aerobrake Aiming Periapsis Altitude (km)')
-% ylabel('Number of Passes')
-% title('Number of Passes vs Aiming Periapsis Altitude')
-% grid on
-
+% 
+% % Altitude variation plots 
+% % figure;
+% % subplot(2,1,1)
+% % plot(alt_range, num_passes, '-', 'LineWidth', 2)
+% % xlabel('Aerobrake Aiming Periapsis Altitude (km)')
+% % ylabel('Number of Passes')
+% % title('Number of Passes vs Aiming Periapsis Altitude')
+% % grid on
+% 
 % figure
 % subplot(2,1,1)
 % plot(alt_range, time_taken, '-', 'LineWidth', 2)
@@ -159,16 +172,16 @@ r_vecs1 = Y1(:,1:3); % First segment: periapsis to apogee
 % ylabel('Max Heat Shield Mass (kg)')
 % title('Max Heat Shield Mass vs Aiming Periapsis Altitude')
 % grid on
-
-% subplot(2,1,2)
-% plot(alt_range, max_t_TPS_cm, '-', 'LineWidth', 2)
-% xlabel('Aerobrake Aiming Periapsis Altitude (km)')
-% ylabel('Max Heat Shield Thickness (cm)')
-% title('Max Heat Shield Thickness vs Aiming Periapsis Altitude')
-% grid on
+% 
+% % subplot(2,1,2)
+% % plot(alt_range, max_t_TPS_cm, '-', 'LineWidth', 2)
+% % xlabel('Aerobrake Aiming Periapsis Altitude (km)')
+% % ylabel('Max Heat Shield Thickness (cm)')
+% % title('Max Heat Shield Thickness vs Aiming Periapsis Altitude')
+% % grid on
 
 %% === BRAKING MANEUVER AT APOAPSIS TO DROP PERIAPSIS INTO ATMOSPHERE ===
-alt_brake = 541;
+alt_brake = 530;
 rp_brake = r_N + alt_brake;
 ra_brake = ra_init;
 e_brake = (ra_brake - rp_brake)./(ra_brake + rp_brake);
@@ -182,7 +195,6 @@ i_brake = i_init; RAAN_brake = RAAN_init; omega_brake = omega_init;
 Y0 = [ra_brake_init;va_brake_init];
 
 %% === ANIMATE TRAJECTORY FROM APOAPSIS TO ATMOSPHERE ENTRY ===
-
 % % Initial state at apogee after braking maneuver
 % Y0_apogee = [ra_brake_init; va_brake_init];
 % 
@@ -190,7 +202,7 @@ Y0 = [ra_brake_init;va_brake_init];
 % opts_atm = odeset('RelTol',1e-9, 'AbsTol',1e-9, ...
 %     'Events', @(t, Y) atmosphere_entry_event(t, Y, r_N));
 % 
-% [t2, Y2] = ode113(@(t, Y) eom_perturbed(t, Y, mu_N, r_N, r_N_equ, atmos, ["drag"]), ...
+% [t2, Y2] = ode113(@(t, Y) eom_perturbed(t, Y, mu_N, r_N, r_N_equ, atmos, zonal_model, meridional_model, ["drag"]), ...
 %     [0, 1e7], Y0_apogee, opts_atm);
 % 
 % r_vecs2 = Y2(:,1:3); % Apogee to just before atmosphere
@@ -198,20 +210,19 @@ Y0 = [ra_brake_init;va_brake_init];
 % % Remove the last point of r_vecs1 and t1 to avoid overlap at apogee
 % r_vecs_combined = [r_vecs1(1:end-1, :); r_vecs2];
 % t_combined = [t1(1:end-1); t2 + t1(end)];
+% 
+% % animate_trajectory(r_vecs_combined, t_combined, r_N, 4000, "CaptureToEntry");
 
-% animate_trajectory(r_vecs_combined, t_combined, r_N, 4000, "CaptureToEntry");
-
-%% === PROPAGATE UNDER DRAG UNTIL E < 0.42 AT APOAPSIS ===
+%% === PROPAGATE UNDER DRAG UNTIL E < 0.45 AT APOAPSIS ===
 opts = odeset('RelTol',1e-9, 'AbsTol',1e-9, ...
               'Events', @(t, Y) stop_when_reached_science(t, Y, mu_N));
-[t_out, Y_out] = ode113(@(t, Y) eom_perturbed(t, Y, mu_N, r_N, r_N_equ, atmos, ["drag"]), ...
-                        [0, 0.6 * 365.25 * 86400], Y0, opts);
+[t_out, Y_out] = ode113(@(t, Y) eom_perturbed(t, Y, mu_N, r_N, r_N_equ, atmos, zonal_model, meridional_model, ["drag"]), ...
+                        [0, 1 * 365.25 * 86400], Y0, opts);
 
 %% === ANIMATE ALL AEROBRAKES ===
 % animate_trajectory(Y_out(1:1200, 1:3), t_out(1:1200,1), r_N, 5000, "Aerobrakes")
 
 %% === ANIMATE ONE AEROBRAKE ===
-
 % % Find indices for the first atmospheric pass
 % altitudes = vecnorm(Y_out(:,1:3), 2, 2) - r_N;
 % in_atmos = altitudes <= 4000;
@@ -258,11 +269,8 @@ for i = 1:N
 
     delta_vs(i) = v_exit - v_entry;
 
-    idx_entry = entry_idx(i);
-    idx_exit = exit_idx(i);
-
     idx_entry = entry_idx(i)+1; % first entry within atmosphere
-    idx_exit = exit_idx(i)-1; % last point within atmosphere
+    idx_exit = exit_idx(i)-1;   % last point within atmosphere
 
     % Extract profiles within the atmosphere for this pass
     t_pass = t_out(idx_entry:idx_exit) - t_out(idx_entry); % seconds, start from 0
@@ -282,7 +290,6 @@ fprintf('Number of atmosphere entries: %d\n', N);
 fprintf('Time taken: %.2f days \n', t_days);
 
 %% === SAVE OE VARIATION ===
-
 a_brakes = [a_brake, as];
 e_brakes = [e_brake, eccs];
 i_brakes = [i_brake, incs];
@@ -356,7 +363,6 @@ grid on;
 
 %% === SAVE FINAL AEROBRAKE DATA ===
 % --- Save time, velocity, and altitude for the final aerobrake pass ---
-
 % Find indices for all atmospheric entries/exits
 altitudes = vecnorm(Y_out(:,1:3), 2, 2) - r_N;
 in_atmos = altitudes <= 4000;
@@ -381,8 +387,8 @@ if ~isempty(entry_idx) && ~isempty(exit_idx)
 else
     warning('No atmospheric pass found to save.');
 end
-%% === REACH SCIENCE ORBIT ===
 
+%% === REACH SCIENCE ORBIT ===
 % Assume rp_final is already defined (in km, measured from Neptune's center)
 % Get final state after last aerobrake
 r_final = Y_out(end,1:3)';
@@ -431,7 +437,7 @@ fprintf('  Period:                   %.2f hours\n', T_final / 3600); % convert t
 Y0_final = [r_final; v_final_after_impulse];
 
 % Propagate for one period (no drag, no J2)
-[t_orb, Y_orb] = ode113(@(t, Y) eom_perturbed(t, Y, mu_N, r_N, r_N_equ, atmos, {}), ...
+[t_orb, Y_orb] = ode113(@(t, Y) eom_perturbed(t, Y, mu_N, r_N, r_N_equ, atmos, zonal_model, meridional_model, {}), ...
     [0, T_final], Y0_final);
 
 % Extract position vectors
@@ -452,14 +458,15 @@ legend('Neptune','Final Science Orbit');
 hold off;
 
 save("ScienceOrbit.mat", "a_final", "e_final", "h_final", "i_final", "RAAN_final", "omega_final", "t_days")
-%% === EVENT FUNCTIONS: STOP AT APOGEE WITH E < 0.42 ===
+
+%% === EVENT FUNCTIONS: STOP AT APOGEE WITH E < 0.45 ===
 function [value, isterminal, direction] = stop_when_reached_science(~, Y, mu)
     r = Y(1:3); v = Y(4:6);
     [~, e, ~, ~, ~, ~, theta] = oe_from_rv(r, v, mu);
 
-    % Condition 1: e < 0.42 and at apogee
-    cond1 = e - 0.42;
-    cond2 = abs(mod(theta,360) - 180) - 1;
+    % Condition 1: e < 0.45 and at apogee
+    cond1 = e - 0.45;
+    cond2 = abs(mod(theta,360) - 180) - 0.1;
     event1 = max([cond1, cond2]); % triggers when both < 0
 
     % Condition 2: collision with Neptune (r <= r_N)
@@ -475,7 +482,7 @@ end
 function [value, isterminal, direction] = apogee_event(~, Y, mu)
     r = Y(1:3); v = Y(4:6);
     [~, ~, ~, ~, ~, ~, theta] = oe_from_rv(r, v, mu);
-    value = abs(mod(theta,360) - 180) - 1; % within 2 deg of apogee
+    value = abs(mod(theta,360) - 180) - 0.01; % within 2 deg of apogee
     isterminal = 1;
     direction = 0;
 end
@@ -488,11 +495,29 @@ function [value, isterminal, direction] = atmosphere_entry_event(~, Y, r_N)
     direction = -1;
 end
 
+%% === WIND INERTIAL VELOCITY FUNCTION ===
+function v_wind_inertial = v_wind_inertial(r_vec, R, zonal_model, meridional_model)
+    x = r_vec(1); y = r_vec(2); z = r_vec(3);
+    r_mag = norm(r_vec);
+    alt = r_mag - R;
+    lat = asind(z / r_mag);
+    lon = atan2d(y, x);
+    lat_rad = deg2rad(lat);
+    lon_rad = deg2rad(lon);
+    e_hat = [-sind(lon_rad); cosd(lon_rad); 0];
+    n_hat = [-sind(lat_rad)*cosd(lon_rad);
+             -sind(lat_rad)*sind(lon_rad);
+              cosd(lat_rad)];
+    v_zonal = zonal_model(alt);
+    v_meridional = meridional_model(alt);
+    v_wind_inertial = v_zonal * e_hat + v_meridional * n_hat;
+end
+
 %% === DRAG ACCELERATION FUNCTION ===
-function a_drag = drag_acc(r, v, R, atmos)
+function a_drag = drag_acc(r, v, R, atmos, zonal_model, meridional_model)
     beta = 1800e6/(1.15 * pi * 2.5^2);
     omega_N = [0; 0; 2 * pi/(16.11 * 3600)];
-    v_rel = v - cross(omega_N, r);
+    v_rel = v - cross(omega_N, r) - v_wind_inertial(r, R, zonal_model, meridional_model);
     rho = atmos(norm(r) - R);
     a_drag = -0.5 * rho * norm(v_rel) * v_rel / beta;
 end
@@ -515,7 +540,7 @@ function a_J2 = J2_acc(r_vec, mu, R)
 end
 
 %% === EQUATIONS OF MOTION INCLUDING DRAG (AND OPTIONAL J2) ===
-function dY = eom_perturbed(~, Y, mu, R, R_equ, atmos, perturbations)
+function dY = eom_perturbed(~, Y, mu, R, R_equ, atmos, zonal_model, meridional_model, perturbations)
     r = Y(1:3); v = Y(4:6);
     r_norm = norm(r);
     a_total = -mu * r / r_norm^3;
@@ -526,7 +551,7 @@ function dY = eom_perturbed(~, Y, mu, R, R_equ, atmos, perturbations)
                 a_total = a_total + J2_acc(r, mu, R_equ);
             case "drag"
                 if r_norm - R <= 4000
-                    a_total = a_total + drag_acc(r, v, R, atmos);
+                    a_total = a_total + drag_acc(r, v, R, atmos, zonal_model, meridional_model);
                 end
         end
     end
@@ -534,6 +559,7 @@ function dY = eom_perturbed(~, Y, mu, R, R_equ, atmos, perturbations)
     dY = [v; a_total];
 end
 
+%% === ANIMATE TRAJECTORY ===
 function animate_trajectory(r_vecs, t_vec, r_N, resolution, filename)
 % animate_trajectory Animate a 3D trajectory around Neptune and save as MP4
 %   r_vecs: Nx3 array of position vectors (km)

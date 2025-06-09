@@ -59,13 +59,14 @@ end
 
 
 figure
-semilogy(1:days, delta_V)
+semilogy(1:days-1, delta_V(1:end-1),"r",LineWidth=1.5)
 grid on
 xlabel("Days from launch");
 ylabel("\DeltaV (m/s)");
-xlim([0 464])
+%xlim([0 464])
+ylim([10 3e4])
 
-
+%from plot, minimum at day 1, dv = 70.6180263437255 m/s
 
 
 
