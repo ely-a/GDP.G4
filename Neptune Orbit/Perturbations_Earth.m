@@ -157,15 +157,15 @@ for idx = 1:N_AR
     omega_big = [omega_big omega_vals];
     
     
-    % % Plot
-    % figure;
-    % subplot(3,2,1); plot(t_days, a_vals); hold on;       ylabel('a [km]'); title('Semi-major Axis');
-    % subplot(3,2,2); plot(t_days, e_vals);       ylabel('e'); title('Eccentricity');
-    % subplot(3,2,3); plot(t_days, (i_vals));      ylabel('i [deg]');
-    % subplot(3,2,4); plot(t_days, (Omega_vals));  ylabel('\Omega [deg]');
-    % subplot(3,2,5); plot(t_days, (omega_vals));  ylabel('\omega [deg]');
-    % subplot(3,2,6); plot(t_days, (theta_vals));  ylabel('\theta [deg]'); xlabel('Time [days]');
-    % sgtitle('Orbital Elements Over Time (Perturbed)');
+    % Plot
+    figure;
+    subplot(3,2,1); plot(t_days, a_vals); hold on;       ylabel('a [km]'); title('Semi-major Axis');xlabel('Time [days]');
+    subplot(3,2,2); plot(t_days, e_vals);       ylabel('e'); title('Eccentricity');xlabel('Time [days]');
+    subplot(3,2,3); plot(t_days, (i_vals));      ylabel('i [deg]');xlabel('Time [days]');
+    subplot(3,2,4); plot(t_days, (Omega_vals));  ylabel('\Omega [deg]');xlabel('Time [days]');
+    subplot(3,2,5); plot(t_days, (omega_vals));  ylabel('\omega [deg]');xlabel('Time [days]');
+    subplot(3,2,6); plot(t_days, (theta_vals));  ylabel('\theta [deg]'); xlabel('Time [days]');
+    sgtitle('Orbital Elements Over Time (Perturbed)');
 end
 
 dV_mag = sum(dV)
@@ -191,7 +191,7 @@ legend('Unperturbed', 'Perturbed (J2)', 'Location', 'best');
 grid on;
 axis equal;
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
-title('3D Trajectory with J2 Perturbation');
+%title('3D Trajectory with J2 Perturbation');
 
 
 % Plot

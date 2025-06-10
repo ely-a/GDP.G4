@@ -60,7 +60,7 @@ end
 figure
 semilogy(467:days+466-1, delta_V(1:end-1),"r",LineWidth=1.5)
 grid on
-xlabel("Days from launch");
+xlabel("Days from Earth departure");
 ylabel("\DeltaV (m/s)");
 xlim([0 3050]);
 ylim([1e-1 2e4]);
