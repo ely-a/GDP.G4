@@ -20,6 +20,7 @@ vector = r_sc(467, :) - r_sc(466, :);
 r_sc(467:end, :) = r_sc(467:end, :) + repmat(vector,length(r_sc)-466,1);
 r_sc(466, :) = [];
 n = size(r_sc, 1);
+n = 5000;
 r_planets = r_planets(1:n, :);
 vec1 = r_sc(465, :) - r_sc(464, :);
 vec2 = r_sc(467, :) - r_sc(466, :);
@@ -99,7 +100,7 @@ while time_elapsed < n
         dv_total = dv_total + norm(dv);
         dv_list = [dv_list; dv];
     end
-    v1 = v1 + dv;
+    %v1 = v1 + dv;
 end
 
 % Plot comparison
