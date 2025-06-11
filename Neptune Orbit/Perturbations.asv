@@ -180,7 +180,7 @@ end
 %% N-body Perturbations
 
 function a_N_body = N_body_acc()
-    
+
 end
 %% Perturbed equations of motion
 

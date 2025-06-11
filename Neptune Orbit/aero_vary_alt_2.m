@@ -149,7 +149,7 @@ v_final = Y_out(end,4:6)';
 ra_curr = a_curr * (1 + e_curr);
 
 % 4. Set desired periapsis for science orbit
-rp_science = r_N + 1600; % km
+rp_science = r_N + 1800; % km
 
 % 5. Compute required eccentricity and semi-major axis for new orbit
 e_science = (ra_curr - rp_science) / (ra_curr + rp_science);
@@ -211,6 +211,7 @@ function [m_TPS_vec, t_TPS_cm_vec, t_days, num_passes, Y_out] = run_aerobrake_no
     h_brake = sqrt(mu_N * a_brake .* (1 - e_brake.^2));
     va_pre_brake = h_brake/ra_brake;
     va_post_brake = va_init;
+    va_post_brake - va_pre_brake
     i_brake = i_init; RAAN_brake = RAAN_init; omega_brake = omega_init;
     [ra_brake_init, va_brake_init] = rv_from_oe(a_brake, e_brake, i_brake, RAAN_brake, omega_brake, 180, mu_N);
     Y0 = [ra_brake_init;va_brake_init];
