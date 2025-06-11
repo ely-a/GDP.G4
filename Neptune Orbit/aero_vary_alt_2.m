@@ -8,50 +8,51 @@ load("gram_profiles.mat"); % rho_mean, ew_mean, ns_mean, alt_steps
 mu_N = 6.8351e6;         % km^3/s^2
 r_N = 24622;             % km (mean radius)
 r_N_equ = 24764;         % km (equatorial radius)
-C_D_nom = 1.15;
-A = pi * 2.5^2;          % m^2
-m = 1800e6;              % kg
+C_D_nom = 1.22;
+A = pi * 3^2;          % m^2
+m = 1740e6;              % kg
 beta_nom = m / (C_D_nom * A);
-alt_entry_nominal = 544; % km
+alt_entry_nominal = 581; % km
 
 % Build interpolant functions for nominal run
 atmos_nom = @(alt_km) interp1(alt_steps, rho_mean * 1e9, alt_km, 'linear', 0); % kg/km^3
 zonal_nom = @(alt_km) interp1(alt_steps, ew_mean/1000, alt_km, 'linear', 0);   % km/s
 merid_nom = @(alt_km) interp1(alt_steps, ns_mean/1000, alt_km, 'linear', 0);   % km/s
+temps_nom = @(alt_km) interp1(alt_steps, temps_mean, alt_km, "linear", 0);
 
-% --- Sweep over periapsis altitudes ---
-alt_range = 530:1:550; % Example range in km
-max_m_TPS = zeros(size(alt_range));
-time_taken_days = zeros(size(alt_range));
-num_passes_vec = zeros(size(alt_range));
-
-for j = 1:length(alt_range)
-    alt_entry = alt_range(j);
-    fprintf('Running for periapsis altitude: %d km (%d of %d)\n', alt_entry, j, length(alt_range));
-    [m_TPS_vec, ~, t_days, num_passes, ~] = run_aerobrake_nominal(atmos_nom, zonal_nom, merid_nom, beta_nom, alt_entry, mu_N, r_N, r_N_equ);
-    max_m_TPS(j) = max(m_TPS_vec);
-    time_taken_days(j) = t_days;
-    num_passes_vec(j) = num_passes;
-end
-
-% --- Plot results ---
-figure;
-subplot(2,1,1)
-plot(alt_range, max_m_TPS, '-o', 'LineWidth', 2);
-xlabel('Periapsis Altitude (km)');
-ylabel('Max Heat Shield Mass (kg)');
-title('Max Heat Shield Mass vs Periapsis Altitude');
-grid on;
-
-subplot(2,1,2)
-plot(alt_range, time_taken_days, '-o', 'LineWidth', 2);
-xlabel('Periapsis Altitude (km)');
-ylabel('Time to Science Orbit (days)');
-title('Time to Science Orbit vs Periapsis Altitude');
-grid on;
+%% --- Sweep over periapsis altitudes ---
+% alt_range = 540:90:620; % Example range in km
+% max_m_TPS = zeros(size(alt_range));
+% time_taken_days = zeros(size(alt_range));
+% num_passes_vec = zeros(size(alt_range));
+% 
+% for j = 1:length(alt_range)
+%     alt_entry = alt_range(j);
+%     fprintf('Running for periapsis altitude: %d km (%d of %d)\n', alt_entry, j, length(alt_range));
+%     [m_TPS_vec, ~, t_days, num_passes, ~] = run_aerobrake_nominal(atmos_nom, zonal_nom, merid_nom, temps_nom, beta_nom, alt_entry, mu_N, r_N, r_N_equ);
+%     max_m_TPS(j) = max(m_TPS_vec);
+%     time_taken_days(j) = t_days;
+%     num_passes_vec(j) = num_passes;
+% end
+% 
+% % --- Plot results ---
+% figure;
+% subplot(2,1,1)
+% plot(alt_range, max_m_TPS, '-o', 'LineWidth', 2);
+% xlabel('Periapsis Altitude (km)');
+% ylabel('Max Heat Shield Mass (kg)');
+% title('Max Heat Shield Mass vs Periapsis Altitude');
+% grid on;
+% 
+% subplot(2,1,2)
+% plot(alt_range, time_taken_days, '-o', 'LineWidth', 2);
+% xlabel('Periapsis Altitude (km)');
+% ylabel('Time to Science Orbit (days)');
+% title('Time to Science Orbit vs Periapsis Altitude');
+% grid on;
 
 %% Run the nominal aerobrake simulation
-[m_TPS_vec, t_TPS_cm_vec, t_days, num_passes, Y_out] = run_aerobrake_nominal(atmos_nom, zonal_nom, merid_nom, beta_nom, alt_entry_nominal, mu_N, r_N, r_N_equ);
+[m_TPS_vec, t_TPS_cm_vec, t_days, num_passes, Y_out] = run_aerobrake_nominal(atmos_nom, zonal_nom, merid_nom, temps_nom, beta_nom, alt_entry_nominal, mu_N, r_N, r_N_equ);
 
 r_traj = Y_out(:, 1:3); % Trajectory positions
 % Display results
@@ -59,6 +60,8 @@ fprintf('Nominal aerobrake results:\n');
 fprintf('  Number of passes: %d\n', num_passes);
 fprintf('  Time taken: %.2f days\n', t_days);
 fprintf('  Max heat shield mass: %.2f kg\n', max(m_TPS_vec));
+SF = 1.4;
+fprintf('  Max heat shield mass with SF = %.1f: %.2f kg\n', SF, max(m_TPS_vec) * SF);
 fprintf('  Max heat shield thickness: %.2f cm\n', max(t_TPS_cm_vec));
 
 % Plot heat shield mass and thickness per pass
@@ -83,8 +86,7 @@ axis equal; grid on; view(3);
 legend('Trajectory','Neptune');
 hold off;
 
-% filepath: c:\Users\ishaa\OneDrive - Imperial College London\Uni\Year 3\GDP\GDP.G4\Neptune Orbit\aero_vary_alt_2.m
-% --- Plot orbital element variation after each pass ---
+%% --- Plot orbital element variation after each pass ---
 
 % Get indices for the end of each pass
 altitudes = vecnorm(Y_out(:,1:3), 2, 2) - r_N;
@@ -130,6 +132,8 @@ plot(1:N, ra_vec - r_N, '-o', 'LineWidth', 2);
 xlabel('Pass'); ylabel('Apoapsis Altitude (km)');
 title('Apoapsis Altitude after each pass'); grid on;
 
+%% Comaprison of final delta v with eccentricty
+
 % --- Final science orbit insertion at apoapsis after aerobraking ---
 
 % 1. Get the final state after aerobraking
@@ -145,7 +149,7 @@ v_final = Y_out(end,4:6)';
 ra_curr = a_curr * (1 + e_curr);
 
 % 4. Set desired periapsis for science orbit
-rp_science = r_N + 1.6; % km
+rp_science = r_N + 1600; % km
 
 % 5. Compute required eccentricity and semi-major axis for new orbit
 e_science = (ra_curr - rp_science) / (ra_curr + rp_science);
@@ -172,9 +176,16 @@ v_final_after_impulse = v_final + (delta_v_apogee / norm(v_final)) * v_final;
 
 [a_final, e_final, h_final, i_final, RAAN_final, omega_final, ~] = oe_from_rv(r_final, v_final_after_impulse, mu_N);
 
+t_laser = find_time_neptune(r_N, h_final, e_final, a_final, mu_N, 2000)/60;
+P = 2*pi * sqrt(a_final^3/mu_N)/3600;
+
+fprintf('Laser run time/orbit:  %.2f minutes\n', t_laser);
+fprintf('Science orbit period:  %.2f hours\n', P);
+fprintf('Number of science orbits = %.1f\n', (5 * 365.25 - t_days)/(P/24));
+
 save("ScienceOrbit.mat", "a_final", "e_final", "h_final", "i_final", "RAAN_final", "omega_final", "t_days")
 %% === Helper function: run_aerobrake_nominal ===
-function [m_TPS_vec, t_TPS_cm_vec, t_days, num_passes, Y_out] = run_aerobrake_nominal(atmos, zonal, merid, beta, alt_entry, mu_N, r_N, r_N_equ)
+function [m_TPS_vec, t_TPS_cm_vec, t_days, num_passes, Y_out] = run_aerobrake_nominal(atmos, zonal, merid, temps, beta, alt_entry, mu_N, r_N, r_N_equ)
     % Initial orbit setup
     alt_cap = 10000;                      % km above surface
     rp_cap = alt_cap + r_N;
@@ -229,7 +240,18 @@ function [m_TPS_vec, t_TPS_cm_vec, t_days, num_passes, Y_out] = run_aerobrake_no
         v_pass = vecnorm(Y_out(idx_entry:idx_exit,4:6),2,2);   % km/s
 
         % Call HeatShieldMass
-        [m_TPS, t_TPS_cm] = HeatShieldMass(alt_pass, v_pass, t_pass);
+        [m_TPS, t_TPS_cm] = HeatShieldMass('tiles' ,alt_pass, v_pass, t_pass, temps, atmos);
+
+        % if i == N
+        %     fileID = fopen('aerobraking_data.txt', 'w');
+        % 
+        %     % Write data row by row
+        %     for k = 1:length(t_pass)
+        %         fprintf(fileID, '%.6e\t%.6e\t%.6e\n', t_pass(k), v_pass(k), alt_pass(k));
+        %     end
+        % 
+        %     fclose(fileID);
+        % end
 
         m_TPS_vec(i) = m_TPS;
         t_TPS_cm_vec(i) = t_TPS_cm;
@@ -301,3 +323,30 @@ function v_wind_inertial = v_wind_inertial(r_vec, R, zonal_model, meridional_mod
     v_meridional = meridional_model(alt);
     v_wind_inertial = v_zonal * e_hat + v_meridional * n_hat;
 end
+
+function [t] = find_time_neptune(R, h, e, a, mu, altitude)
+
+    r_need = R + altitude;  
+    % theta_need = acosd((h^2 / (mu*r_need) - 1)/e)
+    % 
+    % E_need = 2 * atan( sqrt((1-e)/(1+e)) * tand(theta_need/2) );
+
+    % Clamp cos(theta) to avoid NaNs due to floating point precision
+    cos_theta = (h^2 / (mu * r_need) - 1) / e;
+    cos_theta = max(-1, min(1, cos_theta));
+    theta_rad = acos(cos_theta);  % radians
+
+    % Eccentric anomaly (elliptical orbit)
+    E_need = 2 * atan( sqrt((1 - e)/(1 + e)) * tan(theta_rad / 2) );
+
+    M_need = E_need - e * sin(E_need);
+    if M_need < 0
+        M_need = M_need + 2*pi;
+    end
+    P_need = 2 * pi * sqrt(a^3 / mu);
+    T_need = M_need * P_need/(2*pi);
+    t = T_need * 2;
+    %t = t /(3600);
+
+
+end 

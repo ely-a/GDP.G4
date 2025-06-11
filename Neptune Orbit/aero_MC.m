@@ -13,10 +13,10 @@ load("gram_profiles.mat"); % rho_mean, rho_std, ew_mean, ew_std, ns_mean, ns_std
 mu_N = 6.8351e6;         % km^3/s^2
 r_N = 24622;             % km (mean radius)
 r_N_equ = 24764;         % km (equatorial radius)
-C_D_nom = 1.15; % or your nominal value
+C_D_nom = 1.22; % or your nominal value
 C_D_std = 0.1 * C_D_nom;
-A = pi * 2.5^2; % m^2, or your reference area
-m = 1800e6;     % kg, or your nominal mass
+A = pi * 3^2; % m^2, or your reference area
+m = 1740e6;     % kg, or your nominal mass
 alt_entry_nominal = 544;                   % km, as in your script
 alt_entry_std = 5;                         % km, 1-sigma
 

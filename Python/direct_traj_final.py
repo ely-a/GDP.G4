@@ -24,10 +24,10 @@ earth = jpl_lp("earth")
 neptune = jpl_lp("neptune")
 
 # --- Time grid ---
-start_date = datetime(2032, 5, 1)
-end_date = datetime(2032, 7, 1)
+start_date = datetime(2033, 5, 1)
+end_date = datetime(2034, 8, 1)
 t0_grid = np.arange(datetime_to_mjd2000(start_date), datetime_to_mjd2000(end_date), 1)  # every 5 days
-tof_grid = np.arange(2800, 3500, 1)  # TOF from 1000 to 4050 days
+tof_grid = np.arange(6.5 * 365.25, 7.5 * 365.25, 1)  # TOF from 1000 to 4050 days
 
 # --- Meshgrids ---
 T0, TOF = np.meshgrid(t0_grid, tof_grid)
@@ -91,11 +91,11 @@ T0_dt = np.vectorize(mjd2000_to_datetime)(T0)
 ARRIVAL_dt = np.vectorize(mjd2000_to_datetime)(ARRIVAL)
 
 # --- User constraints ---
-max_depart_dv = 10.5      # km/s, departure Δv
-max_arrival_dv = 6.0     # km/s, arrival Δv
+max_depart_dv = 12.5      # km/s, departure Δv
+max_arrival_dv = 8.0     # km/s, arrival Δv
 max_total_dv = max_depart_dv + max_arrival_dv      # km/s, total Δv
 tof_min = 0.0            # years, min TOF
-tof_max = 8.2            # years, max TOF
+tof_max = 7.0 - 8/365.25            # years, max TOF
 
 # --- Combined mask for all constraints ---
 TOF_years = TOF / 365.25
@@ -112,33 +112,34 @@ mask_total = (DV <= max_total_dv) & (TOF_years >= tof_min) & (TOF_years <= tof_m
 mask_depart = (DV_depart <= max_depart_dv) & (TOF_years >= tof_min) & (TOF_years <= tof_max)
 mask_arrival = (DV_arrival <= max_arrival_dv) & (TOF_years >= tof_min) & (TOF_years <= tof_max)
 
-# # --- Plotting: Total Δv ---
+# --- Plotting: Total Δv ---
 # fig, ax = plt.subplots(figsize=(12, 6))
 # levels = np.linspace(np.nanmin(DV), np.nanmax(DV), 40)
-# cs = ax.contourf(T0_dt, ARRIVAL_dt, DV, levels=levels, cmap='viridis')
+# cs = ax.contourf(T0_dt, TOF_years, DV, levels=levels, cmap='viridis')
 # cbar = plt.colorbar(cs)
-# cbar.set_label('Total Δv (km/s)')
-# highlight = np.zeros_like(DV, dtype=float)
-# highlight[mask_total] = 1.0
-# ax.contourf(T0_dt, ARRIVAL_dt, highlight, levels=[0.5, 1.5], colors='none', hatches=['////'], alpha=0)
-# cs_lines = ax.contour(T0_dt, ARRIVAL_dt, DV, levels=levels, colors='k', linewidths=0.5)
-# ax.clabel(cs_lines, inline=True, fontsize=7, fmt="%.1f")
-# tof_levels = np.arange(np.floor(np.nanmin(TOF_years)), np.ceil(np.nanmax(TOF_years))+0.5, 0.5)
-# cs_tof = ax.contour(
-#     T0_dt, ARRIVAL_dt, TOF_years,
-#     levels=tof_levels,
-#     colors='red',
-#     linestyles='dotted',
-#     linewidths=2.0
-# )
-# ax.clabel(cs_tof, fmt="%.1f yr", colors='red', fontsize=8)
-# ax.xaxis.set_major_locator(MonthLocator())
+# cbar.set_label('Total Δv (km/s)', fontsize=17)
+# cbar.ax.tick_params(labelsize=17)
+# # highlight = np.zeros_like(DV, dtype=float)
+# # highlight[mask_total] = 1.0
+# # ax.contourf(T0_dt, ARRIVAL_dt, highlight, levels=[0.5, 1.5], colors='none', hatches=['////'], alpha=0)
+# cs_lines = ax.contour(T0_dt, TOF_years, DV, levels=levels, colors='k', linewidths=0.5)
+# # ax.clabel(cs_lines, inline=True, fontsize=7, fmt="%.1f")
+# tof_levels = np.arange(np.floor(np.nanmin(TOF_years)), np.ceil(np.nanmax(TOF_years))+0.2, 0.2)
+# # cs_tof = ax.contour(
+# #     T0_dt, ARRIVAL_dt, TOF_years,
+# #     levels=tof_levels,
+# #     colors='red',
+# #     linestyles='dotted',
+# #     linewidths=2.0
+# # )
+# # ax.clabel(cs_tof, fmt="%.1f yr", colors='red', fontsize=8)
+# ax.xaxis.set_major_locator(MonthLocator(interval=4))
 # ax.xaxis.set_major_formatter(DateFormatter('%Y-%m'))
-# ax.yaxis.set_major_locator(MonthLocator(interval=6))
-# ax.yaxis.set_major_formatter(DateFormatter('%Y-%m'))
-# ax.set_xlabel('Departure Date')
-# ax.set_ylabel('Arrival Date')
-# ax.set_title('Earth → Neptune Porkchop Plot\nArrival Date vs Departure Date (Total Δv)')
+# # ax.yaxis.set_major_locator(MonthLocator(interval=6))
+# # ax.yaxis.set_major_formatter(DateFormatter('%Y-%m'))
+# ax.set_xlabel('Departure Date', fontsize=18)
+# ax.set_ylabel('Time of Flight (years)', fontsize=18)
+# ax.tick_params(axis='both', labelsize=17)
 # fig.autofmt_xdate()
 # plt.tight_layout()
 # plt.show()
@@ -164,7 +165,7 @@ mask_arrival = (DV_arrival <= max_arrival_dv) & (TOF_years >= tof_min) & (TOF_ye
 # ax.clabel(cs_tof, fmt="%.1f yr", colors='red', fontsize=8)
 # ax.xaxis.set_major_locator(MonthLocator())
 # ax.xaxis.set_major_formatter(DateFormatter('%Y-%m'))
-# ax.yaxis.set_major_locator(MonthLocator(interval=6))
+# ax.yaxis.set_major_locator(MonthLocator(interval=3))
 # ax.yaxis.set_major_formatter(DateFormatter('%Y-%m'))
 # ax.set_xlabel('Departure Date')
 # ax.set_ylabel('Arrival Date')
@@ -201,6 +202,56 @@ mask_arrival = (DV_arrival <= max_arrival_dv) & (TOF_years >= tof_min) & (TOF_ye
 # ax.set_title('Earth → Neptune Porkchop Plot\nArrival Date vs Departure Date (Arrival Δv)')
 # fig.autofmt_xdate()
 # plt.tight_layout()
+# plt.show()
+
+# import matplotlib.gridspec as gridspec
+
+# # === Create Subplots ===
+# fig = plt.figure(figsize=(15, 12))
+# gs = gridspec.GridSpec(1, 2)
+target_arrival_date = datetime(2040, 6, 2)
+
+# # --- Departure Δv subplot ---
+# ax1 = fig.add_subplot(gs[0])
+# levels_depart = np.linspace(np.nanmin(DV_depart), np.nanmax(DV_depart), 20)
+# cs1 = ax1.contourf(T0_dt, ARRIVAL_dt, DV_depart, levels=levels_depart, cmap='Blues')
+# cbar1 = plt.colorbar(cs1, ax=ax1)
+# cbar1.set_label('Departure Δv (km/s)', fontsize=18)
+# cbar1.ax.tick_params(labelsize=15)
+# cs_lines1 = ax1.contour(T0_dt, ARRIVAL_dt, DV_depart, levels=levels_depart, colors='k', linewidths=0.5)
+# ax1.clabel(cs_lines1, inline=True, fontsize=12, fmt="%.1f")
+# ax1.xaxis.set_major_locator(MonthLocator(interval=3))
+# ax1.xaxis.set_major_formatter(DateFormatter('%Y-%m'))
+# ax1.yaxis.set_major_locator(MonthLocator(interval=3))
+# ax1.yaxis.set_major_formatter(DateFormatter('%Y-%m'))
+# ax1.set_xlabel('Departure Date', fontsize=18)
+# ax1.tick_params(axis='both', labelsize=17)
+# ax1.set_ylabel('Arrival Date', fontsize=18)
+# ax1.axhline(target_arrival_date, color='red', linestyle='--', linewidth=1.5, label='Target: 2040-06-02')
+# ax1.legend(loc='upper left', fontsize=15)
+
+# # --- Arrival Δv subplot ---
+# ax2 = fig.add_subplot(gs[1])
+# levels_arrival = np.linspace(np.nanmin(DV_arrival), np.nanmax(DV_arrival), 20)
+# cs2 = ax2.contourf(T0_dt, ARRIVAL_dt, DV_arrival, levels=levels_arrival, cmap='Blues')
+# cbar2 = plt.colorbar(cs2, ax=ax2)
+# cbar2.set_label('Arrival Δv (km/s)', fontsize=18)
+# cbar2.ax.tick_params(labelsize=15)
+# cs_lines2 = ax2.contour(T0_dt, ARRIVAL_dt, DV_arrival, levels=levels_arrival, colors='k', linewidths=0.5)
+# ax2.clabel(cs_lines2, inline=True, fontsize=12, fmt="%.1f")
+# ax2.xaxis.set_major_locator(MonthLocator(interval=3))
+# ax2.xaxis.set_major_formatter(DateFormatter('%Y-%m'))
+# ax2.yaxis.set_major_locator(MonthLocator(interval=3))
+# ax2.yaxis.set_major_formatter(DateFormatter('%Y-%m'))
+# ax2.set_xlabel('Departure Date', fontsize = 18)
+# ax2.set_ylabel('Arrival Date', fontsize=18)
+# ax2.tick_params(axis='both', labelsize=17)
+# ax2.axhline(target_arrival_date, color='red', linestyle='--', linewidth=1.5, label='Target: 2040-06-02')
+# ax2.legend(loc='upper left', fontsize=15)
+
+
+# plt.tight_layout()
+# plt.subplots_adjust(bottom=0.1)  # Manually pad the bottom
 # plt.show()
 
 # --- Find and print transfer windows for all constraints ---
@@ -265,9 +316,9 @@ if flat_dep_dates.size > 0:
             print(f"  Optimal departure: {best_dep.strftime('%Y-%m-%d')}")
             print(f"    Arrival:         {best_arr.strftime('%Y-%m-%d')}")
             print(f"    TOF:             {best_tof:.1f} days ({best_tof/365.25:.2f} years)")
-            print(f"    Total Δv:        {best_total_dv:.2f} km/s")
-            print(f"    Departure Δv:    {best_depart_dv:.2f} km/s")
-            print(f"    Arrival Δv:      {best_arrival_dv:.2f} km/s")
+            print(f"    Total Δv:        {best_total_dv:.4f} km/s")
+            print(f"    Departure Δv:    {best_depart_dv:.4f} km/s")
+            print(f"    Arrival Δv:      {best_arrival_dv:.4f} km/s")
 
             # Find and print the minimum TOF trajectory in this window
             min_tof_idx = np.argmin(window_tof)
