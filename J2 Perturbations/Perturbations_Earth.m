@@ -18,13 +18,13 @@ radius_Earth = 6378; % km
 
 %% Unperturbed Trajectory
 
-if exist('vectors_Earth.mat', 'file') == 2
-    load("vectors_Earth.mat")
-    r0 = r0_sc;
-    v0 = v0_sc;
-else
-    error('no intitial conditions')
-end
+% if exist('vectors_Earth.mat', 'file') == 2
+%     load("vectors_Earth.mat")
+%     r0 = r0_sc;
+%     v0 = v0_sc;
+% else
+%     error('no intitial conditions')
+% end
 
 
 rp = 200 + radius_Earth;
@@ -48,13 +48,14 @@ i_big = [];
 Omega_big = [];
 omega_big = [];
 t_days_big = [0];
+t_elapsed = 0;
+t_perturbed_big = [];
 
 for idx = 1:N_AR
     [r0, v0] = rv_from_oe(a_AR(idx), e_AR(idx), i, Omega, omega, theta, mu_Earth);
     %[a, e, h, i, Omega, omega, theta] = find_OE(r0, v0, mu_Earth);
     P = 2 * pi * sqrt(a_AR(idx)^3 / mu_Earth);  % seconds
     N_orbits = 1;
-    P_AR = 2 * pi * sqrt(a_AR(idx)^3 / mu_Earth);  % seconds
 
     delta_theta = 1;
     thetas = mod(theta:delta_theta:theta+360, 360);
@@ -84,15 +85,19 @@ for idx = 1:N_AR
     perturbs = ["J2"];
     [t_out, Y_out] = ode113(@(t,Y) eom_perturbed(t, Y, mu_Earth, radius_Earth, perturbs) ...
                             , tspan, Y0, opts);
-    
+
     r_perturbed = Y_out(:,1:3)';
     v_perturbed = Y_out(:,4:6)';
     
-    v_perturbed_peri = max(vecnorm(v_perturbed(:,30:end)));
-    dV(idx) = abs(v_perturbed_peri - norm(v_perturbed(:,1)))*1e3;
+    [v_perturbed_peri, idx2] = max(vecnorm(v_perturbed(:,30:end)));
+    dV(idx2) = abs(v_perturbed_peri - norm(v_perturbed(:,1)))*1e3;
+    t_perturbed = t_out(1:idx2)';
 
-    r_perturbed_big = [r_perturbed_big r_perturbed];
+    r_perturbed_big = [r_perturbed_big r_perturbed(:, 1:idx2)];
     r_unperturbed_big = [r_unperturbed_big r_unperturbed];
+    t_perturbed_big = [t_perturbed_big t_perturbed + t_elapsed];
+
+    t_elapsed = t_elapsed + t_perturbed(idx2);
 
     
     % %% Plot trajectories
