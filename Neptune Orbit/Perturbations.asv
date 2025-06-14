@@ -17,6 +17,19 @@ mass_neptune = 102.409e24; % kg
 r_N = 24622;             % km (mean radius)
 r_N_equ = 24764;         % km (equatorial radius)
 
+%% Load drag data
+
+A = pi * 3^2;          % m^2
+m = (1740 - 380) * 1e6;              % kg
+C_D = 1.22;
+beta_nom = m / (C_D * A);
+
+% Build interpolant functions for nominal run
+load("gram_profiles.mat"); % rho_mean, ew_mean, ns_mean, alt_steps
+atmos_nom = @(alt_km) interp1(alt_steps, rho_mean * 1e9, alt_km, 'linear', 0); % kg/km^3
+zonal_nom = @(alt_km) interp1(alt_steps, ew_mean/1000, alt_km, 'linear', 0);   % km/s
+merid_nom = @(alt_km) interp1(alt_steps, ns_mean/1000, alt_km, 'linear', 0);   % km/s
+
 %% Load moon data
 
 if exist('moon_orbits.mat', 'file') ~= 2 
@@ -26,22 +39,21 @@ load('moon_orbits.mat','orbits_mat','moon_names', 'max_len', 'times_all', 'veloc
 
 %% Unperturbed Trajectory
 
-if exist('vectors.mat', 'file') == 2
-    load("vectors.mat")
-    r0 = r0_sc;
-    v0 = v0_sc;
+if exist('ScienceOrbit.mat', 'file') == 2
+    load("ScienceOrbit.mat")
 else
     error('no intitial conditions')
 end
 
 % [r0, v0] = rv_from_oe(3e5, 0.9, 90, 90, 250, 0, mu_neptune);
+[r0, v0] = rv_from_oe(a_final, e_final, i_final, RAAN_final, omega_final, 180, mu_N);
 [a, e, h, i, Omega, omega, theta] = oe_from_rv(r0, v0, mu_N);
 P = 2 * pi * sqrt(a^3 / mu_N);  % seconds
-N_orbits = 1;
+N_orbits = 0.5;
 T = P * N_orbits;
 
 delta_theta = 1;
-thetas = mod(theta:delta_theta:theta+360, T/P * 360);
+thetas = mod(theta:delta_theta:theta+360 * T/P, 360);
 
 r_unperturbed = zeros(3, length(thetas));
 v_unperturbed = zeros(3, length(thetas));
@@ -55,6 +67,13 @@ for j = 2:length(thetas)
     v_unperturbed(:,j) = v_j;
 end
 
+%% N-body perturbations
+
+jd0 = 2.466559716824276e+06;
+
+idx_triton = find(strcmpi("Triton", moon_names));  % case-insensitive
+idx_sun = find(strcmpi("Sun", moon_names));  % case-insensitive
+
 %% Perturbed trajectory
 
 % Initial state vector (km and km/s)
@@ -65,9 +84,18 @@ tspan = [0, T];         % time steps
 
 % Integrate perturbed motion
 opts = odeset('RelTol',1e-9, 'AbsTol',1e-9);
-perturbs = ["J2"];
-[t_out, Y_out] = ode113(@(t,Y) eom_perturbed(t, Y, mu_N, r_N, r_N_equ, perturbs) ...
-                        , tspan, Y0, opts);
+perturbs = ["J2", "drag"];
+
+orbits_sun_triton = orbits_mat(:,:,[idx_sun, idx_triton]);
+times_sun_triton = {times_all{idx_sun}, times_all{idx_triton}};
+mu_sun = 1.327e11;
+mu_triton = 1428.495;
+mu_sun_triton = [mu_sun, mu_triton];
+
+[t_out, Y_out] = ode113(@(t,Y) eom_perturbed(t, Y, mu_N, r_N, r_N_equ, perturbs, jd0, ...
+                                             orbits_sun_triton, times_sun_triton, mu_sun_triton, ...
+                                             atmos_nom, zonal_nom, merid_nom, beta_nom) ...
+                                             , tspan, Y0, opts);
 
 r_perturbed = Y_out(:,1:3)';
 v_perturbed = Y_out(:,4:6)';
@@ -179,12 +207,44 @@ end
 
 %% N-body Perturbations
 
-function a_N_body = N_body_acc()
+function a_N_body = N_body_acc(jd, orbits, times, mus, r_sc)
+    persistent pos_sun; persistent pos_triton;
 
+    if isempty(pos_sun)
+
+        % Create anonymous functions for each body
+        pos_sun = @(tq)  interp1(times{1}, orbits(:,:,1), jd, 'spline', 0);
+
+        pos_triton = @(tq) interp1(times{2}, orbits(:,:,2), jd, 'spline', 0);
+    end
+    
+    r1 = pos_sun(jd)';
+    r2 = pos_triton(jd)';
+    r_bodies = {r1, r2};
+
+    % Compute total acceleration
+    a_N_body = zeros(3,1);
+    for i = 1:2
+        delta_r = r_bodies{i} - r_sc;
+        d = norm(delta_r);
+        if d > 0
+            a_N_body = a_N_body + mus(i) * delta_r / d^3;
+        end
+    end
 end
+
+%% Drag Pertubration
+
+function a_drag = drag_acc(r, v, R, atmos, zonal_model, meridional_model, beta)
+    omega_N = [0; 0; 2 * pi/(16.11 * 3600)];
+    v_rel = v - cross(omega_N, r) - v_wind_inertial(r, R, zonal_model, meridional_model);
+    rho = atmos(norm(r) - R);
+    a_drag = -0.5 * rho * norm(v_rel) * v_rel / beta;
+end
+
 %% Perturbed equations of motion
 
-function dY = eom_perturbed(~, Y, mu_N, R, R_equ, perturbations)
+function dY = eom_perturbed(t, Y, mu_N, R, R_equ, perturbations, jd0, orbits, times, mus, atmos, zonal, merid, beta)
     r = Y(1:3);
     v = Y(4:6);
     r_norm = norm(r);
@@ -194,15 +254,38 @@ function dY = eom_perturbed(~, Y, mu_N, R, R_equ, perturbations)
     for k = 1:length(perturbations)
         switch perturbations{k}
             case "drag"
-                % if r_norm - R <= 4000
-                %     a_total = a_total + drag_acc(r, v, R, atmos, zonal, merid, beta);
-                % end
+                if r_norm - R <= 4000
+                    a_drag = drag_acc(r, v, R, atmos, zonal, merid, beta);
+                    a_total = a_total + a_drag;
+                end
             case "J2"
-                a_total = a_total + J2_acc(r, mu_N, R_equ);
+                a_J2 = J2_acc(r, mu_N, R_equ);
+                a_total = a_total + a_J2;
+                disp(n)
             case "N-body"
-                a_total = a_total + N_body_acc();
+                jd = jd0 + t/86400;
+                a_N_body = N_body_acc(jd, orbits, times, mus, r);
+                a_total = a_total + a_N_body;
         end
     end
 
     dY = [v; a_total];
+end
+
+%% === Wind function ===
+function v_wind_inertial = v_wind_inertial(r_vec, R, zonal_model, meridional_model)
+    x = r_vec(1); y = r_vec(2); z = r_vec(3);
+    r_mag = norm(r_vec);
+    alt = r_mag - R;
+    lat = asind(z / r_mag);
+    lon = atan2d(y, x);
+    lat_rad = deg2rad(lat);
+    lon_rad = deg2rad(lon);
+    e_hat = [-sind(lon_rad); cosd(lon_rad); 0];
+    n_hat = [-sind(lat_rad)*cosd(lon_rad);
+             -sind(lat_rad)*sind(lon_rad);
+              cosd(lat_rad)];
+    v_zonal = zonal_model(alt);
+    v_meridional = meridional_model(alt);
+    v_wind_inertial = v_zonal * e_hat + v_meridional * n_hat;
 end
