@@ -17,22 +17,22 @@ mass_Earth = 5.972e24; % kg
 radius_Earth = 6378; % km
 
 %% Unperturbed Trajectory
-
-if exist('vectors_Earth.mat', 'file') == 2
-    load("vectors_Earth.mat")
-    r0 = r0_sc;
-    v0 = v0_sc;
-else
-    error('no intitial conditions')
-end
+% 
+% if exist('vectors_Earth.mat', 'file') == 2
+%     load("vectors_Earth.mat")
+%     r0 = r0_sc;
+%     v0 = v0_sc;
+% else
+%     error('no intitial conditions')
+% end
 
 
 rp = 200 + radius_Earth;
 e = 0.96;
 a = rp / (1 - e);
 
-N_AR = 20;
-e_AR = linspace(0,e,N_AR);
+e_AR =     [0.0701    0.1481    0.2361    0.3360    0.4509    0.5848    0.7436 0.9359];
+N_AR = length(e_AR);
 a_AR = rp ./ (1 - e_AR);
 
 
