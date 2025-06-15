@@ -1,7 +1,7 @@
 clc
 clear 
 
-days_after = 0:0.1:14; % days after launch window
+days_after = 0:0.25:40; % days after launch window
 
 data = load("earth_orbit.mat");
 r = data.r_perturbed_big;
@@ -31,3 +31,8 @@ for day = 1:length(days_after)
     % plot3(r_moon(1, :), r_moon(2, :), r_moon(3, :))
     % axis equal
 end
+
+plot(days_after, dv_list, color="black", LineWidth=2)
+grid on
+xlabel("Launch delay (days)")
+ylabel("N-body perturbing Δv (m/s)")

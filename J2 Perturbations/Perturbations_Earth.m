@@ -192,7 +192,7 @@ plot3(r_perturbed_big(1,:), r_perturbed_big(2,:), r_perturbed_big(3,:), 'r--', '
 % plot3(r_perturbed_big(1,end), r_perturbed_big(2,end), r_perturbed_big(3,end), 'rs');
 % text(r_perturbed_big(1,end), r_perturbed_big(2,end), r_perturbed_big(3,end), '  End (Perturbed)', 'Color', 'r');
 
-legend('Unperturbed', 'Perturbed (J2)', 'Location', 'best');
+legend('Unperturbed', 'Perturbed', 'Location', 'best');
 grid on;
 axis equal;
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');

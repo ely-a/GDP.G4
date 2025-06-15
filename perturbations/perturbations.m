@@ -20,7 +20,6 @@ vector = r_sc(467, :) - r_sc(466, :);
 r_sc(467:end, :) = r_sc(467:end, :) + repmat(vector,length(r_sc)-466,1);
 r_sc(466, :) = [];
 n = size(r_sc, 1);
-n = 5000;
 r_planets = r_planets(1:n, :);
 vec1 = r_sc(465, :) - r_sc(464, :);
 vec2 = r_sc(467, :) - r_sc(466, :);
@@ -63,6 +62,7 @@ big_rv_propagated = [r1' v1'];
 dv_list = [];
 tcm_list = [];
 targets = [];
+tcm_locs = [];
 
 % Call n-body propagator
 while time_elapsed < n
@@ -94,25 +94,26 @@ while time_elapsed < n
     end
     endpos = r_sc(min(n, time_elapsed + tf_days2), :);
     targets = [targets; endpos];
+    tcm_locs = [tcm_locs; r1];
     [V1, ~] = lambert2(r1, endpos, tf_days2, 0, mu_sun);
     dv = (V1 - v1);
     if norm(dv) < 0.1
         dv_total = dv_total + norm(dv);
         dv_list = [dv_list; dv];
     end
-    %v1 = v1 + dv;
+    v1 = v1 + dv;
 end
 
 % Plot comparison
 figure;
-plot3(r_sc(:, 1), r_sc(:, 2), r_sc(:, 3), 'b', 'LineWidth', 1.5);
+plot3(r_sc(:, 1), r_sc(:, 2), r_sc(:, 3), "magenta", 'LineWidth', 1.5);
 hold on;
-plot3(big_rv_propagated(:,1), big_rv_propagated(:,2), big_rv_propagated(:,3), 'r--', 'LineWidth', 1.5);
+plot3(big_rv_propagated(:,1), big_rv_propagated(:,2), big_rv_propagated(:,3), "cyan", 'LineWidth', 1.5);
 % scatter3(r_sc(tcm_list,1), ...
 %     r_sc(tcm_list,2), ...
 %     r_sc(tcm_list,3), 'kx', 'LineWidth', 1.5)
-scatter3(targets(:, 1), targets(:, 2), targets(:, 3), 'go', 'filled')
-legend('Unperturbed trajectory', 'Perturbed trajectory',"Correction maneuver applied");
+scatter3(tcm_locs(:, 1), tcm_locs(:, 2), tcm_locs(:, 3), 'ro', 'filled')
+legend('Unperturbed trajectory', 'Perturbed trajectory', "TCMs");
 xlabel('X (km)');
 ylabel('Y (km)');
 zlabel('Z (km)');
@@ -120,10 +121,6 @@ grid on;
 axis equal;
 %title('Spacecraft Orbit Propagation (N-body vs Original)');
 set(gca, 'Clipping', 'off');
-
-figure
-semilogy(1:length(dv_list), dv_list)
-
 % =========================================================================
 
 % propagation function

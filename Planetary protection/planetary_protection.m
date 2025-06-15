@@ -64,7 +64,7 @@ nCases = 27;
 r_plot = cell(nCases, 1);  % Column cell array
 
 % Range of offsets for each component
-delta = [-1, 0, 1] * 1e-3;
+delta = [-1, 0, 1] * 5e-4;
 [dx, dy, dz] = ndgrid(delta, delta, delta);
 offsets = [dx(:), dy(:), dz(:)];  % 27×3
 
@@ -152,7 +152,7 @@ for i = 1:nPlanets
     % Plot final position as scatter (no legend entry)
     scatter3(x(end), y(end), z(end), 50, colors(i,:), 'filled', 'HandleVisibility','off');
     
-    text(x(end), y(end), z(end), [' ' planetNames(i)], 'FontSize', 10, 'Color', colors(i,:));
+    text(x(end), y(end), z(end), ['      ' planetNames(i)], 'FontSize', 10, 'Color', colors(i,:));
 end
 
 % Plot spacecraft trajectories
