@@ -91,7 +91,7 @@ for idx = 1:N_AR
     
     [v_perturbed_peri, idx2] = max(vecnorm(v_perturbed(:,30:end)));
     dV(idx2) = abs(v_perturbed_peri - norm(v_perturbed(:,1)))*1e3;
-    t_perturbed = t_out(1:idx2)';
+    t_perturbed = t_out';
 
     r_perturbed_big = [r_perturbed_big r_perturbed(:, 1:end)];
     r_unperturbed_big = [r_unperturbed_big r_unperturbed];
