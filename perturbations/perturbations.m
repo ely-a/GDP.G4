@@ -123,6 +123,15 @@ axis equal;
 set(gca, 'Clipping', 'off');
 % =========================================================================
 
+% plot dv scatter plot
+dv_list_mag = vecnorm(dv_list, 2, 2) * 1000; % in m/s
+figure
+semilogy(1:14, dv_list_mag, "kx")
+grid on
+xlabel("TCM number")
+ylabel("TCM Δv (m/s)")
+xlim([0, 15])
+
 % propagation function
 function rv_out = propagate_orbit_nbody(r1, v1, tf_days, mu_sun, mu_planets, r_planets, radius, S0,R_S,c,C_R,A_s,m)
     % tf is in days

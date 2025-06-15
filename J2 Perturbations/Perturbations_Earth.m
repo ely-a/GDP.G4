@@ -31,8 +31,8 @@ rp = 200 + radius_Earth;
 e = 0.96;
 a = rp / (1 - e);
 
-N_AR = 20;
-e_AR = linspace(0,e,N_AR);
+N_AR = 9;
+e_AR = [0 0.0701 0.1481 0.2361 0.3360 0.4509 0.5848 0.7436 0.9359];
 a_AR = rp ./ (1 - e_AR);
 
 
@@ -93,7 +93,7 @@ for idx = 1:N_AR
     dV(idx2) = abs(v_perturbed_peri - norm(v_perturbed(:,1)))*1e3;
     t_perturbed = t_out(1:idx2)';
 
-    r_perturbed_big = [r_perturbed_big r_perturbed(:, 1:idx2)];
+    r_perturbed_big = [r_perturbed_big r_perturbed(:, 1:end)];
     r_unperturbed_big = [r_unperturbed_big r_unperturbed];
     t_perturbed_big = [t_perturbed_big t_perturbed + t_elapsed];
 
