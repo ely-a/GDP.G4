@@ -4,6 +4,9 @@ clear; clc; close all
 % Load atmospheric and wind statistics
 load("gram_profiles.mat"); % rho_mean, ew_mean, ns_mean, alt_steps
 
+global acc_log
+acc_log = struct('time', [], 'a_drag', []);
+
 % Nominal values
 mu_N = 6.8351e6;         % km^3/s^2
 r_N = 24622;             % km (mean radius)
@@ -21,7 +24,7 @@ merid_nom = @(alt_km) interp1(alt_steps, ns_mean/1000, alt_km, 'linear', 0);   %
 temps_nom = @(alt_km) interp1(alt_steps, temps_mean, alt_km, "linear", 0);
 
 %% --- Sweep over periapsis altitudes ---
-% alt_range = 540:90:620; % Example range in km
+% alt_range = 560:5:620; % Example range in km
 % max_m_TPS = zeros(size(alt_range));
 % time_taken_days = zeros(size(alt_range));
 % num_passes_vec = zeros(size(alt_range));
@@ -35,21 +38,67 @@ temps_nom = @(alt_km) interp1(alt_steps, temps_mean, alt_km, "linear", 0);
 %     num_passes_vec(j) = num_passes;
 % end
 % 
-% % --- Plot results ---
+% %% --- Plot results ---
 % figure;
 % subplot(2,1,1)
-% plot(alt_range, max_m_TPS, '-o', 'LineWidth', 2);
-% xlabel('Periapsis Altitude (km)');
-% ylabel('Max Heat Shield Mass (kg)');
-% title('Max Heat Shield Mass vs Periapsis Altitude');
+% plot(alt_range, max_m_TPS*1.4, '-', 'LineWidth', 2);
+% hold on;
+% TPS_lim = 500;
+% h_y = yline(TPS_lim, 'r--', 'LineWidth', 1.5, 'Label', '500 kg', 'FontSize',15);
+% alt_mass = ceil(interp1(max_m_TPS*1.4, alt_range, TPS_lim, "spline"));
+% xline(alt_mass,  'r--', 'LineWidth', 1.5, 'Label', sprintf("%.0f km", alt_mass), 'FontSize',15)
+% xlabel('Aiming Periapsis Altitude (km)');
+% ylabel('TPS Mass (SF = 1.4) [kg]');
 % grid on;
 % 
 % subplot(2,1,2)
-% plot(alt_range, time_taken_days, '-o', 'LineWidth', 2);
+% plot(alt_range, time_taken_days, '-', 'LineWidth', 2);
+% hold on
+% time_lim = 1;
+% h_y = yline(time_lim * 365.25, 'r--', 'LineWidth', 1.5, 'Label', '1.0 year', 'FontSize',15);
+% alt_time = ceil(interp1(time_taken_days, alt_range, time_lim * 365.25, "spline"));
+% xline(alt_time,  'r--', 'LineWidth', 1.5, 'Label', sprintf("%.0f km", alt_time), 'FontSize',15)
 % xlabel('Periapsis Altitude (km)');
-% ylabel('Time to Science Orbit (days)');
-% title('Time to Science Orbit vs Periapsis Altitude');
+% ylabel('Aerobraking Duration [days]');
 % grid on;
+% 
+% figure;
+% figure;
+% 
+% % --- Left Y-Axis: TPS Mass ---
+% yyaxis left
+% h1 = plot(alt_range, max_m_TPS*1.4, 'r', 'LineWidth', 2);  % TPS Mass curve
+% hold on
+% TPS_lim = 500;
+% yline(TPS_lim, '--r', 'LineWidth', 1.5, 'Label', '500 kg', 'FontSize', 16, 'LabelHorizontalAlignment', 'left');
+% alt_mass = ceil(interp1(max_m_TPS*1.4, alt_range, TPS_lim, "spline"));
+% xline(alt_mass, '--r', 'LineWidth', 1.5, 'Label', sprintf("%.0f km", alt_mass), 'FontSize', 16, 'LabelOrientation', 'horizontal');
+% ylabel('TPS Mass (SF = 1.4) [kg]');
+% ax = gca;
+% ax.YColor = 'r';
+% 
+% % --- Right Y-Axis: Aerobraking Duration ---
+% yyaxis right
+% h2 = plot(alt_range, time_taken_days, 'b:', 'LineWidth', 2);  % Duration curve
+% time_lim = 1;
+% yline(time_lim * 365.25, '--b', 'LineWidth', 1.5, 'Label', '1.0 year', 'FontSize', 16, 'LabelHorizontalAlignment', 'right');
+% alt_time = ceil(interp1(time_taken_days, alt_range, time_lim * 365.25, "spline"));
+% xline(alt_time, '--b', 'LineWidth', 1.5, 'Label', sprintf("%.0f km", alt_time), 'FontSize', 16, 'LabelOrientation', 'horizontal');
+% ylabel('Aerobraking Duration [days]');
+% ax = gca;
+% ax.YColor = 'b';
+% 
+% % --- Dummy line for constraints legend entry ---
+% h3 = plot(nan, nan, 'k--', 'LineWidth', 1.5);  % generic dashed line
+% 
+% xlabel('Aiming Periapsis Altitude (km)');
+% grid on;
+% 
+% % --- Legend ---
+% legend([h1, h2, h3], {'TPS Mass', ' Duration', 'Constraints'}, ...
+%     'Location', 'best', 'FontSize', 16);
+
+
 
 %% Run the nominal aerobrake simulation
 [m_TPS_vec, t_TPS_cm_vec, t_days, num_passes, Y_out] = run_aerobrake_nominal(atmos_nom, zonal_nom, merid_nom, temps_nom, beta_nom, alt_entry_nominal, mu_N, r_N, r_N_equ);
@@ -132,6 +181,20 @@ plot(1:N, ra_vec - r_N, '-o', 'LineWidth', 2);
 xlabel('Pass'); ylabel('Apoapsis Altitude (km)');
 title('Apoapsis Altitude after each pass'); grid on;
 
+t_plot = acc_log.time / 3600;  % convert to days
+
+figure;
+semilogy(t_plot, acc_log.a_drag * 1000, 'b:', 'DisplayName', 'Atmospheric Drag');
+
+
+xlabel('Time [hours]', Interpreter='latex');
+ylabel('Acceleration [m/s$^2$]', Interpreter='latex');
+legend('Location', 'best', Interpreter='latex');
+grid on;
+
+time = acc_log.time;
+drag = acc_log.a_drag * 1000;
+save("drag_aerobraking.mat", "drag", "time")
 %% Comaprison of final delta v with eccentricty
 
 % --- Final science orbit insertion at apoapsis after aerobraking ---
@@ -208,6 +271,7 @@ function [m_TPS_vec, t_TPS_cm_vec, t_days, num_passes, Y_out] = run_aerobrake_no
     ra_brake = ra_init;
     e_brake = (ra_brake - rp_brake)./(ra_brake + rp_brake);
     a_brake = 0.5 * (ra_brake + rp_brake);
+    2*pi*sqrt(a_brake^3/mu_N)/86400
     h_brake = sqrt(mu_N * a_brake .* (1 - e_brake.^2));
     va_pre_brake = h_brake/ra_brake;
     va_post_brake = va_init;
@@ -282,7 +346,10 @@ function [value, isterminal, direction] = stop_when_reached_science(~, Y, mu)
     direction = [-1, -1];
 end
 %% === Equations of motion with drag ===
-function dY = eom_perturbed(~, Y, mu, R, R_equ, atmos, zonal, merid, beta, perturbations)
+function dY = eom_perturbed(t, Y, mu, R, R_equ, atmos, zonal, merid, beta, perturbations)
+    global acc_log
+
+    a_drag = zeros(3,1);
     r = Y(1:3); v = Y(4:6);
     r_norm = norm(r);
     a_total = -mu * r / r_norm^3;
@@ -291,10 +358,14 @@ function dY = eom_perturbed(~, Y, mu, R, R_equ, atmos, zonal, merid, beta, pertu
         switch perturbations{k}
             case "drag"
                 if r_norm - R <= 4000
-                    a_total = a_total + drag_acc(r, v, R, atmos, zonal, merid, beta);
+                    a_drag = drag_acc(r, v, R, atmos, zonal, merid, beta);
+                    a_total = a_total + a_drag;
                 end
         end
     end
+
+    acc_log.time(end+1,1)     = t;
+    acc_log.a_drag(end+1,1)   = norm(a_drag);
 
     dY = [v; a_total];
 end

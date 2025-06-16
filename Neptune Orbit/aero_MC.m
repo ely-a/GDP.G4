@@ -4,7 +4,7 @@
 clear; clc; close all
 
 %% === SETTINGS ===
-N_MC = 10000; % Number of Monte Carlo runs
+N_MC = 100; % Number of Monte Carlo runs
 
 % Load atmospheric and wind statistics
 load("gram_profiles.mat"); % rho_mean, rho_std, ew_mean, ew_std, ns_mean, ns_std, alt_steps
@@ -182,6 +182,31 @@ plot(x_min2, y_min2, 'r-', 'LineWidth', 2);
 legend('Histogram', 'Normal Fit');
 hold off;
 
+figure
+subplot(1,2,1)
+histogram(max_m_TPS, 25, 'FaceColor', [0.2 0.6 1], 'Normalization', 'pdf');
+xlabel('Maximum Heat Shield Mass per MC Run (kg)');
+ylabel('Probability Density');
+grid on;
+hold on;
+pd1 = fitdist(max_m_TPS, 'Normal');
+x1 = linspace(min(max_m_TPS), max(max_m_TPS), 100);
+y1 = normpdf(x1, pd1.mu, pd1.sigma);
+plot(x1, y1, 'r-', 'LineWidth', 2);
+hold off;
+
+subplot(1,2,2)
+histogram(time_taken_days, 25, 'FaceColor', [0.3 0.7 0.3], 'Normalization', 'pdf');
+xlabel('Time Taken (days)');
+ylabel('Probability Density');
+grid on;
+hold on;
+pd3 = fitdist(time_taken_days, 'Normal');
+x3 = linspace(min(time_taken_days), max(time_taken_days), 100);
+y3 = normpdf(x3, pd3.mu, pd3.sigma);
+plot(x3, y3, 'r-', 'LineWidth', 2);
+hold off;
+
 fprintf('\n--- Monte Carlo Statistics ---\n');
 fprintf('Max heat shield mass:      Mean = %.2f kg, 99th percentile = %.2f kg\n', mean(max_m_TPS), prctile(max_m_TPS,99));
 fprintf('Max heat shield thickness: Mean = %.2f cm, 99th percentile = %.2f cm\n', mean(max_t_TPS), prctile(max_t_TPS,99));
@@ -189,6 +214,18 @@ fprintf('Min heat shield mass:      Mean = %.2f kg, 99th percentile = %.2f kg\n'
 fprintf('Min heat shield thickness: Mean = %.2f cm, 99th percentile = %.2f cm\n', mean(min_t_TPS), prctile(min_t_TPS,99));
 fprintf('Time taken:                Mean = %.2f days, 99th percentile = %.2f days\n', mean(time_taken_days), prctile(time_taken_days,99));
 fprintf('Number of passes:          Mean = %.2f, 99th percentile = %.2f\n', mean(num_passes), prctile(num_passes,99));
+
+% Define threshold for failure (1 year)
+duration_limit = 365.25; % days
+
+% Compute the fraction of runs that exceed the limit
+n_exceed = sum(time_taken_days > duration_limit);
+fraction_exceed = n_exceed / length(time_taken_days);
+percentile_exceed = 100 * (1 - fraction_exceed);
+
+fprintf('\n%.2f%% of runs completed within 1 year.\n', 100 - 100*fraction_exceed);
+fprintf('=> Aerobraking succeeds up to the %.2fth percentile.\n', percentile_exceed);
+
 
 %% === Helper function: run_aerobrake_sim ===
 function [m_TPS_vec, t_TPS_cm_vec, t_days, num_passes] = run_aerobrake_sim(atmos, zonal, merid, temps, beta, alt_entry, mu_N, r_N, r_N_equ, i_cap, RAAN_cap, omega_cap)

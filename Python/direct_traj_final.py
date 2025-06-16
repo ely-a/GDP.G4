@@ -24,10 +24,10 @@ earth = jpl_lp("earth")
 neptune = jpl_lp("neptune")
 
 # --- Time grid ---
-start_date = datetime(2033, 5, 1)
-end_date = datetime(2034, 8, 1)
+start_date = datetime(2031, 5, 1)
+end_date = datetime(2031, 8, 1)
 t0_grid = np.arange(datetime_to_mjd2000(start_date), datetime_to_mjd2000(end_date), 1)  # every 5 days
-tof_grid = np.arange(6.5 * 365.25, 7.5 * 365.25, 1)  # TOF from 1000 to 4050 days
+tof_grid = np.arange(8.5 * 365.25, 9.5 * 365.25, 1)  # TOF from 1000 to 4050 days
 
 # --- Meshgrids ---
 T0, TOF = np.meshgrid(t0_grid, tof_grid)
@@ -91,11 +91,11 @@ T0_dt = np.vectorize(mjd2000_to_datetime)(T0)
 ARRIVAL_dt = np.vectorize(mjd2000_to_datetime)(ARRIVAL)
 
 # --- User constraints ---
-max_depart_dv = 12.5      # km/s, departure Δv
-max_arrival_dv = 8.0     # km/s, arrival Δv
+max_depart_dv = 10.0      # km/s, departure Δv
+max_arrival_dv = 4.5     # km/s, arrival Δv
 max_total_dv = max_depart_dv + max_arrival_dv      # km/s, total Δv
 tof_min = 0.0            # years, min TOF
-tof_max = 7.0 - 8/365.25            # years, max TOF
+tof_max = 9.0 + 3.0/365.25            # years, max TOF
 
 # --- Combined mask for all constraints ---
 TOF_years = TOF / 365.25

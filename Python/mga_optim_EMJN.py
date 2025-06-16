@@ -33,13 +33,14 @@ def delta_v_capture(vinf):  # vinf in km/s
 
 def main():
     # Define planets and bounds
-    seq = [jpl_lp('earth'), jpl_lp('jupiter'), jpl_lp('neptune')]
-    t0 = [to_mjd2000(datetime(2032, 3, 23)), to_mjd2000(datetime(2032, 3, 24))]  # launch window
+    seq = [jpl_lp('earth'), jpl_lp('mars'), jpl_lp('jupiter'), jpl_lp('neptune')]
+    t0 = [to_mjd2000(datetime(2031, 2, 8)), to_mjd2000(datetime(2031, 2, 9))]  # launch window
     tof = [
-        [400, 500],   # Earth->Jupiter leg (days)
-        [2000, 2527], # Jupiter->Neptune leg (days)
+        [90, 100],   # Earth->Jupiter leg (days)
+        [500, 600], # Jupiter->Neptune leg (days)
+        [3300, 3333]
     ]
-    vinf = 11.0  # km/s (launch v-infinity)
+    vinf = 8.68  # km/s (launch v-infinity)
 
     # Create the MGA UDP
     udp = mga(
@@ -104,6 +105,7 @@ def main():
         traj_epochs.append(t_mjd)
 
     # Leg 2: Jupiter to Neptune
+    # Leg 2: Mars to Jupiter
     tof2 = x_best[2]
     arr2_mjd2000 = arr1_mjd2000 + tof2
 
@@ -112,18 +114,36 @@ def main():
     lambert2 = pk.lambert_problem(r2, r3, dt2, pk.MU_SUN)
     v2_lam = lambert2.get_v1()[0]
 
-    N2 = N_points - N1 + 1  # ensure total points = N_points+1
-    epochs2 = np.linspace(arr1_mjd2000, arr2_mjd2000, N2)
+    N2 = int(N_points * (tof2 / sum(x_best[1:])))
+    epochs2 = np.linspace(arr1_mjd2000, arr2_mjd2000, N2, endpoint=False)
     for idx, t_mjd in enumerate(epochs2):
-        if idx == 0:
-            continue  # Skip the first point to avoid dt_sec = 0
         dt_sec = (t_mjd - arr1_mjd2000) * DAY2SEC
         r_vec, _ = propagate_lagrangian(r2, v2_lam, dt_sec, pk.MU_SUN)
         sc_positions.append([ri / 1e3 for ri in r_vec])
         traj_epochs.append(t_mjd)
 
+    # Leg 3: Jupiter to Neptune
+    tof3 = x_best[3]
+    arr3_mjd2000 = arr2_mjd2000 + tof3
+
+    r4, v4 = seq[3].eph(epoch(arr3_mjd2000))
+    dt3 = tof3 * DAY2SEC
+    lambert3 = pk.lambert_problem(r3, r4, dt3, pk.MU_SUN)
+    v3_lam = lambert3.get_v1()[0]
+
+    N3 = N_points - N1 - N2 + 1  # balance the total number of points
+    epochs3 = np.linspace(arr2_mjd2000, arr3_mjd2000, N3)
+    for idx, t_mjd in enumerate(epochs3):
+        if idx == 0:
+            continue
+        dt_sec = (t_mjd - arr2_mjd2000) * DAY2SEC
+        r_vec, _ = propagate_lagrangian(r3, v3_lam, dt_sec, pk.MU_SUN)
+        sc_positions.append([ri / 1e3 for ri in r_vec])
+        traj_epochs.append(t_mjd)
+
     sc_positions = np.array(sc_positions)
     traj_epochs = np.array(traj_epochs)
+
 
     # --- Export trajectory and planet positions to text file ---
     planet_names = ['mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune']

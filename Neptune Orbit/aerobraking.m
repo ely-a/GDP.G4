@@ -44,7 +44,7 @@ load("ScienceOrbit.mat")
 
 %% Finding apogee of capture orbit
 
-dv_init = 0.01:0.01:0.5;
+dv_init = 0.01:0.01:5;
 vp_init = vp_cap - dv_init;
 rp_init = rp_cap;
 eps_init = (vp_init.^2)/2 - mu_N/rp_init;
@@ -57,6 +57,28 @@ plot(dv_init, ra_init)
 xlabel("$\Delta V$ (km s$^{-1})$", "Interpreter", "latex")
 ylabel("r$_a$ (km)", "Interpreter","latex")
 title("r$_a$ vs initial $\Delta V$ post capture", "Interpreter", "latex")
+
+figure
+plot(dv_init, e_init)
+xlabel("$\Delta V$ (km s$^{-1})$", "Interpreter", "latex")
+ylabel("r$_a$ (km)", "Interpreter","latex")
+title("r$_a$ vs initial $\Delta V$ post capture", "Interpreter", "latex")
+
+%% Chemical to rach science
+
+ra_final = a_final * (1+e_final);
+rp_final = a_final * (1-e_final);
+vp_final = h_final/rp_final;
+va_final = h_final/ra_final;
+
+e_inter = (ra_final - rp_cap)/(ra_final + rp_cap); 
+a_inter = 0.5 * (ra_final + rp_cap);
+h_inter = sqrt(mu_N * a_inter * (1 - e_inter^2));
+va_inter = h_inter/ra_final;
+vp_inter = h_inter/rp_cap;
+dv1 = vp_inter - vp_cap;
+dv2 = va_final - va_inter;
+
 
 %% Select initial dv based on trade-off
 

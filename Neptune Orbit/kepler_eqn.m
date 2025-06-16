@@ -1,6 +1,6 @@
 function delta_theta = kepler_eqn(r, v, delta_t, mu)
 
-    [a, e, ~, ~, ~, ~, theta] = find_OE(r, v, mu);
+    [a, e, ~, ~, ~, ~, theta] = oe_from_rv(r, v, mu);
     n = sqrt(mu/a^3);
     
     E0 = 2 * atan(sqrt((1 - e)/(1 + e)) * tand(theta/2)); % radians

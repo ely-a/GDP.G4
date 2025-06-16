@@ -13,7 +13,7 @@ set(groot,'defaultAxesXGrid','on') % Turn x grid lines on
 set(groot,'defaultAxesYGrid','on') % Turn y grid lines on
 
 %% --- Load data from Python ---
-sc_data = readmatrix('spacecraft_trajectory_mga.txt'); % skip header if present
+sc_data = readmatrix('spacecraft_trajectory_direct.txt'); % skip header if present
 
 sc_time = sc_data(:,1);
 
@@ -51,10 +51,12 @@ ylabel('Y (km)');
 zlabel('Z (km)');
 
 % Plot full planet orbits (for the whole time span)
+orbit_handles = gobjects(1, length(planet_names)); % preallocate handle array
 for i = 1:length(planet_names)
-    plot3(planet_xyz{i}(:,1), planet_xyz{i}(:,2), planet_xyz{i}(:,3), ...
+    orbit_handles(i) = plot3(planet_xyz{i}(:,1), planet_xyz{i}(:,2), planet_xyz{i}(:,3), ...
         'Color', colors(i,:), 'LineWidth', 1.5, 'DisplayName', planet_names(i));
 end
+
 
 % Plot initial spacecraft position
 sc_traj = plot3(sc_x(1), sc_y(1), sc_z(1), 'k-', 'LineWidth', 2, 'DisplayName', 'Spacecraft');
@@ -91,6 +93,11 @@ for k = 1:10:length(sc_time)
     writeVideo(v, frame);
     pause(0.01)
 end
+
+legend(orbit_handles, planet_names, 'Location', 'northwest');
+drawnow;
+frame = getframe(gcf);
+writeVideo(v, frame);
 
 close(v);
 disp('Video saved as spacecraft_animation.mp4');

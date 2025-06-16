@@ -2,6 +2,13 @@ clear
 clc
 close all
 
+set(groot,'defaultLineLineWidth',2) % Set all line widths to 2 unless stated otherwise
+set(groot,'defaultAxesFontSize',16) % Set all axes font size to 16 unless stated otherwise
+set(groot,'defaulttextfontsize',16) % Set all text font sizes to 16 unless stated otherwise
+set(groot,'defaultLineMarkerSize',12) % Set all marker sizes to 16 unless stated otherwise
+set(groot,'defaultAxesXGrid','on') % Turn x grid lines on
+set(groot,'defaultAxesYGrid','on') % Turn y grid lines on
+
 winds = readmatrix("Winds.txt");
 density = readmatrix("Density.txt");
 temperatures = readmatrix("Temp.txt");
@@ -38,40 +45,43 @@ ns_std     = std(winds_NS_mat,  0, 2);
 temps_mean = mean(temps_mat, 2);
 temps_std     = std(temps_mat,  0, 2);
 
-% old_rhos = readmatrix("densitymodel.txt");
-% old_alt = old_rhos(:, 2)/1000;
-% old_rho = old_rhos(:,1);
+old_rhos = readmatrix("densitymodel.txt");
+old_alt = old_rhos(:, 2)/1000;
+old_rho = old_rhos(:,1);
 
 % Optional: plot
 figure
-semilogx(rho_mean, alt_steps); hold on;
+subplot(1, 3, 1)
+semilogx(rho_mean, alt_steps, 'b'); hold on;
 semilogx(rho_mean + 3*rho_std, alt_steps, 'r--');
 semilogx(rho_mean - 3*rho_std, alt_steps, 'r--');
-% semilogx(old_rho, old_alt, 'b--');
+% semilogx(old_rho, old_alt, 'k-.');
 xlabel('Density [kg/m^3]'); ylabel('Altitude [km]');
-title('Density ± 3σ (log scale)'); grid on;
+legend('Mean', 'Mean + 3σ', 'Mean - 3σ', 'Location', 'Best');
+% xticks([1e-12 1e-10 1e-8 1e-15 1e-10 1e-5 1e0])
+xticks([1e-15 1e-10 1e-5 1e0])
 
-figure
-subplot(1,2,1)
+subplot(1,3,2)
 plot(ew_mean, alt_steps); hold on;
 plot(ew_mean + 3*ew_std, alt_steps, 'r--');
 plot(ew_mean - 3*ew_std, alt_steps, 'r--');
 xlabel('Eastward Wind [m/s]');
-title('Eastward Wind ± 3σ'); grid on;
+xticks(-500 : 250 : 500)
 
-subplot(1,2,2)
+
+subplot(1,3,3)
 plot(ns_mean, alt_steps); hold on;
 plot(ns_mean + 3*ns_std, alt_steps, 'r--');
 plot(ns_mean - 3*ns_std, alt_steps, 'r--');
 xlabel('Northward Wind [m/s]');
-title('Northward Wind ± 3σ'); grid on;
 
-figure
-plot(temps_mean, alt_steps); hold on;
-plot(temps_mean + 3*temps_std, alt_steps, 'r--');
-plot(temps_mean - 3*temps_std, alt_steps, 'r--');
-xlabel('Temperature [K]');
-title('Temperature ± 3σ'); grid on;
+
+% figure
+% plot(temps_mean, alt_steps); hold on;
+% plot(temps_mean + 3*temps_std, alt_steps, 'r--');
+% plot(temps_mean - 3*temps_std, alt_steps, 'r--');
+% xlabel('Temperature [K]');
+% title('Temperature ± 3σ'); grid on;
 
 save('gram_profiles.mat', 'alt_steps', ...
      'rho_mean', 'rho_std', ...

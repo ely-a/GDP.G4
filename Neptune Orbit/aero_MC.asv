@@ -4,7 +4,7 @@
 clear; clc; close all
 
 %% === SETTINGS ===
-N_MC = 10000; % Number of Monte Carlo runs
+N_MC = 100; % Number of Monte Carlo runs
 
 % Load atmospheric and wind statistics
 load("gram_profiles.mat"); % rho_mean, rho_std, ew_mean, ew_std, ns_mean, ns_std, alt_steps
@@ -40,6 +40,7 @@ for mc = 1:N_MC
     rho_mc = rho_mean + randn(size(rho_mean)) .* rho_std;
     ew_mc  = ew_mean  + randn(size(ew_mean))  .* ew_std;
     ns_mc  = ns_mean  + randn(size(ns_mean))  .* ns_std;
+    temp_mc = temps_mean + randn(size(temps_mean)) .* temps_std;
 
     % --- Sample beta and entry altitude ---
     C_D_mc = C_D_nom + randn * C_D_std;
@@ -55,7 +56,7 @@ for mc = 1:N_MC
     atmos_mc = @(alt_km) interp1(alt_steps, rho_mc * 1e9, alt_km, 'linear', 0); % kg/km^3
     zonal_mc = @(alt_km) interp1(alt_steps, ew_mc/1000, alt_km, 'linear', 0);   % km/s
     merid_mc = @(alt_km) interp1(alt_steps, ns_mc/1000, alt_km, 'linear', 0);   % km/s
-    temps_mc = @(alt_km) interp1(alt_steps, ns_mc/1000, alt_km, 'linear', 0);
+    temps_mc = @(alt_km) interp1(alt_steps, temp_mc, alt_km, 'linear', 0);
 
     try
         [m_TPS_vec, t_TPS_cm_vec, t_days, pass] = run_aerobrake_sim(atmos_mc, zonal_mc, merid_mc, temps_mc, beta_mc, alt_entry_mc, mu_N, r_N, r_N_equ, i_cap_mc, RAAN_cap_mc, omega_cap_mc);
@@ -181,6 +182,20 @@ plot(x_min2, y_min2, 'r-', 'LineWidth', 2);
 legend('Histogram', 'Normal Fit');
 hold off;
 
+figure
+subplot(1,2,1)
+histogram(max_m_TPS, 25, 'FaceColor', [0.2 0.6 1], 'Normalization', 'pdf');
+xlabel('Maximum Heat Shield Mass per MC Run (kg)');
+ylabel('Probability Density');
+grid on;
+hold on;
+pd1 = fitdist(max_m_TPS, 'Normal');
+x1 = linspace(min(max_m_TPS), max(max_m_TPS), 100);
+y1 = normpdf(x1, pd1.mu, pd1.sigma);
+plot(x1, y1, 'r-', 'LineWidth', 2);
+legend('Histogram', 'Normal Fit');
+hold off;
+
 fprintf('\n--- Monte Carlo Statistics ---\n');
 fprintf('Max heat shield mass:      Mean = %.2f kg, 99th percentile = %.2f kg\n', mean(max_m_TPS), prctile(max_m_TPS,99));
 fprintf('Max heat shield thickness: Mean = %.2f cm, 99th percentile = %.2f cm\n', mean(max_t_TPS), prctile(max_t_TPS,99));
@@ -190,8 +205,8 @@ fprintf('Time taken:                Mean = %.2f days, 99th percentile = %.2f day
 fprintf('Number of passes:          Mean = %.2f, 99th percentile = %.2f\n', mean(num_passes), prctile(num_passes,99));
 
 %% === Helper function: run_aerobrake_sim ===
-function [m_TPS_vec, t_TPS_cm_vec, t_days, num_passes] = run_aerobrake_sim(atmos, zonal, merid, temps, beta, alt_entry, mu_N, r_N, r_N_equ)
-    % Initial orbit setup (as in your main script)
+function [m_TPS_vec, t_TPS_cm_vec, t_days, num_passes] = run_aerobrake_sim(atmos, zonal, merid, temps, beta, alt_entry, mu_N, r_N, r_N_equ, i_cap, RAAN_cap, omega_cap)
+    % Initial orbit setup (as in your main script)                        
     alt_cap = 10000;                      % km above surface
     rp_cap = alt_cap + r_N;
     e_cap = 1;

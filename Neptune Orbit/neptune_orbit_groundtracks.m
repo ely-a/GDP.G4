@@ -75,7 +75,7 @@ for k = 1:length(t)
 end
 
 % === CALL FUNCTION TO PLOT GROUND TRACKS ===
-%plot_ground_track_neptune_modes(r_ECI_all, jd_array, 'neptune_map.png', n_orbits);
+plot_ground_track_neptune_modes(r_ECI_all, jd_array, 'neptune_map.png', n_orbits);
 
 % == PLANE CHANGE ==
 i_target_deg = 80;
@@ -576,14 +576,38 @@ function plot_ground_track_neptune_modes(r_ECI_all, jd_array, texture_file, n_or
     setm(ax2,'MLabelLocation',30,'PLabelLocation',30,'FontSize',10);
     geoshow(img, Rimg, 'DisplayType', 'texturemap'); hold on;
     scatterm(lat, lon, 10, alt, 'filled');
-colormap(turbo);  % Use vivid colormap to contrast Neptune's blue background
-hcb = colorbar; caxis([min(alt) max(alt)]);
-ticks = linspace(min(alt), max(alt), 5);
-hcb.Ticks = ticks;
-hcb.Ticks = ticks(3);
-hcb.TickLabels = compose('%.2f km', ticks(3));
-hcb.FontSize = 20;
-hcb.Position(3) = 0.015;
+    % colormap(turbo);  % Use vivid colormap to contrast Neptune's blue background
+    % hcb = colorbar; 
+    % clim([min(alt) max(alt)]);
+    % ticks = linspace(min(alt), max(alt), 5);
+    % hcb.Ticks = ticks;
+    % % hcb.Ticks = ticks(3);
+    % hcb.TickLabels = compose('%.2f km', ticks(3));
+    % hcb.FontSize = 20;
+    % hcb.Position(3) = 0.015;
+
+    colormap(turbo);  % Use vivid colormap
+    clim([min(alt), max(alt)]);  % Set color limits based on altitude
+
+    % Define ticks including 4000 km
+    ticks = unique([min(alt), 4000, max(alt)]);  % Add more if needed
+    hcb = colorbar;
+    hcb.Ticks = ticks;
+
+    % Create custom labels with 4000 km highlighted
+    labels = strings(size(ticks));
+    for i = 1:length(ticks)
+        if abs(ticks(i) - 4000) < 1e-3
+            labels(i) = sprintf('%.0f km ←', ticks(i));  % Highlight 4000
+        else
+            labels(i) = sprintf('%.0f km', ticks(i));
+        end
+    end
+    hcb.TickLabels = labels;
+
+    hcb.FontSize = 16;
+    hcb.Position(3) = 0.015;  % Narrower bar (optional)
+
 
     % Mark closest approach with triangle
     [~, idx_min] = min(alt);
