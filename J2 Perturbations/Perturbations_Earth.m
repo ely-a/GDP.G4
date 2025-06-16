@@ -178,9 +178,9 @@ dV_mag = sum(dV)
 % Plot trajectories
 
 figure;
-plot3(r_unperturbed_big(1,:), r_unperturbed_big(2,:), r_unperturbed_big(3,:), 'b-','LineWidth', 0.75);  % unperturbed
+plot3(r_unperturbed_big(1,:), r_unperturbed_big(2,:), r_unperturbed_big(3,:), 'k-','LineWidth', 1);  % unperturbed
 hold on;
-plot3(r_perturbed_big(1,:), r_perturbed_big(2,:), r_perturbed_big(3,:), 'r--', 'LineWidth', 1.5);  % perturbed
+plot3(r_perturbed_big(1,:), r_perturbed_big(2,:), r_perturbed_big(3,:), 'r-', 'LineWidth', 0.75);  % perturbed
 
 %Mark start and end points
 % plot3(r_unperturbed_big(1,1), r_unperturbed_big(2,1), r_unperturbed_big(3,1), 'bo', 'MarkerFaceColor', 'b');

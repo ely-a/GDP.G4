@@ -126,10 +126,11 @@ set(gca, 'Clipping', 'off');
 % plot dv scatter plot
 dv_list_mag = vecnorm(dv_list, 2, 2) * 1000; % in m/s
 figure
-semilogy(1:14, dv_list_mag, "kx")
+semilogy(1:14, dv_list_mag, "kx", "LineWidth", 5)
 grid on
 xlabel("TCM number")
 ylabel("TCM Δv (m/s)")
+set(gca, "FontSize", 16)
 xlim([0, 15])
 
 % propagation function

@@ -79,10 +79,10 @@ theta_array = rad2deg(theta_array);
 figure; % Create a new figure
 
 % Plot all three orbital elements on the same axes
-plot(theta_array, oe_matrix(:,4), 'b-', 'DisplayName', 'Inclination (i)');
+plot(theta_array, oe_matrix(:,4), 'b-', "LineWidth",2);
 hold on; % Keep the current plot active for adding more lines
-plot(theta_array, oe_matrix(:,5), 'g-', 'DisplayName', 'Argument of Periapsis (\omega)');
-plot(theta_array, oe_matrix(:,3), 'r-', 'DisplayName', 'RAAN (\Omega)');
+plot(theta_array, oe_matrix(:,5), 'k-', "LineWidth",2);
+plot(theta_array, oe_matrix(:,3), 'r-', "LineWidth",2);
 
 % Add the xline (it will apply to the current axes automatically)
 x_line_value = 185.455;
@@ -93,7 +93,8 @@ xlabel('B-plane angle \theta (°)');
 ylabel('Orbital Element Value (°)'); % General label since values might be different
 grid on;
 xlim([0 360]); % Keep the x-axis limits consistent
-legend('show', 'Location', 'best'); % Show legend to identify lines
+set(gca, "FontSize", 14);
+%legend(["Inclination (i)", "Argument of periapsis (\omega)", "RAAN (\Omega)", "Target angle"])
 hold off; % Release the plot
 
 function result = bplane(r_sc_neptune, v_sc_neptune, mu_neptune, thetaB_deg)
