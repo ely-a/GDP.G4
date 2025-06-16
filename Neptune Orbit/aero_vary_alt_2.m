@@ -1,5 +1,12 @@
 clear; clc; close all
 
+%% SET GRAPHING FONTS AND SIZES
+set(groot,'defaultLineLineWidth',3) % Set all line widths to 2 unless stated otherwise
+set(groot,'defaultAxesFontSize',20) % Set all axes font size to 16 unless stated otherwise
+set(groot,'defaulttextfontsize',20) % Set all text font sizes to 16 unless stated otherwise
+set(groot,'defaultLineMarkerSize',12) % Set all marker sizes to 16 unless stated otherwise
+set(groot,'defaultAxesXGrid','on') % Turn x grid lines on
+set(groot,'defaultAxesYGrid','on') % Turn y grid lines on
 %% === SETTINGS ===
 % Load atmospheric and wind statistics
 load("gram_profiles.mat"); % rho_mean, ew_mean, ns_mean, alt_steps
@@ -24,79 +31,79 @@ merid_nom = @(alt_km) interp1(alt_steps, ns_mean/1000, alt_km, 'linear', 0);   %
 temps_nom = @(alt_km) interp1(alt_steps, temps_mean, alt_km, "linear", 0);
 
 %% --- Sweep over periapsis altitudes ---
-% alt_range = 560:5:620; % Example range in km
-% max_m_TPS = zeros(size(alt_range));
-% time_taken_days = zeros(size(alt_range));
-% num_passes_vec = zeros(size(alt_range));
-% 
-% for j = 1:length(alt_range)
-%     alt_entry = alt_range(j);
-%     fprintf('Running for periapsis altitude: %d km (%d of %d)\n', alt_entry, j, length(alt_range));
-%     [m_TPS_vec, ~, t_days, num_passes, ~] = run_aerobrake_nominal(atmos_nom, zonal_nom, merid_nom, temps_nom, beta_nom, alt_entry, mu_N, r_N, r_N_equ);
-%     max_m_TPS(j) = max(m_TPS_vec);
-%     time_taken_days(j) = t_days;
-%     num_passes_vec(j) = num_passes;
-% end
-% 
-% %% --- Plot results ---
-% figure;
-% subplot(2,1,1)
-% plot(alt_range, max_m_TPS*1.4, '-', 'LineWidth', 2);
-% hold on;
-% TPS_lim = 500;
-% h_y = yline(TPS_lim, 'r--', 'LineWidth', 1.5, 'Label', '500 kg', 'FontSize',15);
-% alt_mass = ceil(interp1(max_m_TPS*1.4, alt_range, TPS_lim, "spline"));
-% xline(alt_mass,  'r--', 'LineWidth', 1.5, 'Label', sprintf("%.0f km", alt_mass), 'FontSize',15)
-% xlabel('Aiming Periapsis Altitude (km)');
-% ylabel('TPS Mass (SF = 1.4) [kg]');
-% grid on;
-% 
-% subplot(2,1,2)
-% plot(alt_range, time_taken_days, '-', 'LineWidth', 2);
-% hold on
-% time_lim = 1;
-% h_y = yline(time_lim * 365.25, 'r--', 'LineWidth', 1.5, 'Label', '1.0 year', 'FontSize',15);
-% alt_time = ceil(interp1(time_taken_days, alt_range, time_lim * 365.25, "spline"));
-% xline(alt_time,  'r--', 'LineWidth', 1.5, 'Label', sprintf("%.0f km", alt_time), 'FontSize',15)
-% xlabel('Periapsis Altitude (km)');
-% ylabel('Aerobraking Duration [days]');
-% grid on;
-% 
-% figure;
-% figure;
-% 
-% % --- Left Y-Axis: TPS Mass ---
-% yyaxis left
-% h1 = plot(alt_range, max_m_TPS*1.4, 'r', 'LineWidth', 2);  % TPS Mass curve
-% hold on
-% TPS_lim = 500;
-% yline(TPS_lim, '--r', 'LineWidth', 1.5, 'Label', '500 kg', 'FontSize', 16, 'LabelHorizontalAlignment', 'left');
-% alt_mass = ceil(interp1(max_m_TPS*1.4, alt_range, TPS_lim, "spline"));
-% xline(alt_mass, '--r', 'LineWidth', 1.5, 'Label', sprintf("%.0f km", alt_mass), 'FontSize', 16, 'LabelOrientation', 'horizontal');
-% ylabel('TPS Mass (SF = 1.4) [kg]');
-% ax = gca;
-% ax.YColor = 'r';
-% 
-% % --- Right Y-Axis: Aerobraking Duration ---
-% yyaxis right
-% h2 = plot(alt_range, time_taken_days, 'b:', 'LineWidth', 2);  % Duration curve
-% time_lim = 1;
-% yline(time_lim * 365.25, '--b', 'LineWidth', 1.5, 'Label', '1.0 year', 'FontSize', 16, 'LabelHorizontalAlignment', 'right');
-% alt_time = ceil(interp1(time_taken_days, alt_range, time_lim * 365.25, "spline"));
-% xline(alt_time, '--b', 'LineWidth', 1.5, 'Label', sprintf("%.0f km", alt_time), 'FontSize', 16, 'LabelOrientation', 'horizontal');
-% ylabel('Aerobraking Duration [days]');
-% ax = gca;
-% ax.YColor = 'b';
-% 
-% % --- Dummy line for constraints legend entry ---
-% h3 = plot(nan, nan, 'k--', 'LineWidth', 1.5);  % generic dashed line
-% 
-% xlabel('Aiming Periapsis Altitude (km)');
-% grid on;
-% 
-% % --- Legend ---
-% legend([h1, h2, h3], {'TPS Mass', ' Duration', 'Constraints'}, ...
-%     'Location', 'best', 'FontSize', 16);
+alt_range = 560:5:620; % Example range in km
+max_m_TPS = zeros(size(alt_range));
+time_taken_days = zeros(size(alt_range));
+num_passes_vec = zeros(size(alt_range));
+
+for j = 1:length(alt_range)
+    alt_entry = alt_range(j);
+    fprintf('Running for periapsis altitude: %d km (%d of %d)\n', alt_entry, j, length(alt_range));
+    [m_TPS_vec, ~, t_days, num_passes, ~] = run_aerobrake_nominal(atmos_nom, zonal_nom, merid_nom, temps_nom, beta_nom, alt_entry, mu_N, r_N, r_N_equ);
+    max_m_TPS(j) = max(m_TPS_vec);
+    time_taken_days(j) = t_days;
+    num_passes_vec(j) = num_passes;
+end
+
+%% --- Plot results ---
+figure;
+subplot(2,1,1)
+plot(alt_range, max_m_TPS*1.4, '-', 'LineWidth', 2);
+hold on;
+TPS_lim = 500;
+h_y = yline(TPS_lim, 'r--', 'LineWidth', 1.5, 'Label', '500 kg', 'FontSize',18);
+alt_mass = ceil(interp1(max_m_TPS*1.4, alt_range, TPS_lim, "spline"));
+xline(alt_mass,  'r--', 'LineWidth', 1.5, 'Label', sprintf("%.0f km", alt_mass), 'FontSize',18)
+xlabel('Aiming Periapsis Altitude (km)');
+ylabel('TPS Mass (SF = 1.4) [kg]');
+grid on;
+
+subplot(2,1,2)
+plot(alt_range, time_taken_days, '-', 'LineWidth', 2);
+hold on
+time_lim = 1;
+h_y = yline(time_lim * 365.25, 'r--', 'LineWidth', 1.5, 'Label', '1.0 year', 'FontSize',18);
+alt_time = ceil(interp1(time_taken_days, alt_range, time_lim * 365.25, "spline"));
+xline(alt_time,  'r--', 'LineWidth', 1.5, 'Label', sprintf("%.0f km", alt_time), 'FontSize',18)
+xlabel('Periapsis Altitude (km)');
+ylabel('Aerobraking Duration [days]');
+grid on;
+
+figure;
+figure;
+
+% --- Left Y-Axis: TPS Mass ---
+yyaxis left
+h1 = plot(alt_range, max_m_TPS*1.4, 'r', 'LineWidth', 2);  % TPS Mass curve
+hold on
+TPS_lim = 500;
+yline(TPS_lim, '--r', 'LineWidth', 1.5, 'Label', '500 kg', 'FontSize', 16, 'LabelHorizontalAlignment', 'left');
+alt_mass = ceil(interp1(max_m_TPS*1.4, alt_range, TPS_lim, "spline"));
+xline(alt_mass, '--r', 'LineWidth', 1.5, 'Label', sprintf("%.0f km", alt_mass), 'FontSize', 16, 'LabelOrientation', 'horizontal');
+ylabel('TPS Mass (SF = 1.4) [kg]');
+ax = gca;
+ax.YColor = 'r';
+
+% --- Right Y-Axis: Aerobraking Duration ---
+yyaxis right
+h2 = plot(alt_range, time_taken_days, 'b:', 'LineWidth', 2);  % Duration curve
+time_lim = 1;
+yline(time_lim * 365.25, '--b', 'LineWidth', 1.5, 'Label', '1.0 year', 'FontSize', 16, 'LabelHorizontalAlignment', 'right');
+alt_time = ceil(interp1(time_taken_days, alt_range, time_lim * 365.25, "spline"));
+xline(alt_time, '--b', 'LineWidth', 1.5, 'Label', sprintf("%.0f km", alt_time), 'FontSize', 16, 'LabelOrientation', 'horizontal');
+ylabel('Aerobraking Duration [days]');
+ax = gca;
+ax.YColor = 'b';
+
+% --- Dummy line for constraints legend entry ---
+h3 = plot(nan, nan, 'k--', 'LineWidth', 1.5);  % generic dashed line
+
+xlabel('Aiming Periapsis Altitude (km)');
+grid on;
+
+% --- Legend ---
+legend([h1, h2, h3], {'TPS Mass', ' Duration', 'Constraints'}, ...
+    'Location', 'best', 'FontSize', 16);
 
 
 
