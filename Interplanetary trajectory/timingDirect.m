@@ -62,7 +62,7 @@ sequence = [2, 7]; % 1 = Venus --> 7 = Neptune
 max_lengths = 5000; % transfer times (days)
 initial_LEO_alt = 300; %km
 final_neptune_alt = 10000; %km
-max_delay = 1; % days past initial launch window
+max_delay = 500; % days past initial launch window
 big_list = zeros(max_lengths - 9, max_delay);
 big_list_launch = zeros(max_lengths - 9, max_delay);
 big_list_capture = zeros(max_lengths - 9, max_delay);
@@ -221,14 +221,12 @@ coe = struct('a', a, 'e', e, 'i', i, ...
 end
 
 figure;
-imagesc(x, y, big_list);   % Specify x and y axes
-colormap hot;
-colorbar;
 clim([0 50]);              % Focus on low dV
 set(gca, 'YDir', 'normal');
 xlabel("Time past initial launch date (days)");
 ylabel("Transfer time (days)");
-title("Total dV");
+grid on
+yline(3000, "r--")
 
 % Add contour lines
 hold on;
@@ -238,14 +236,12 @@ clabel(C, h);  % Add labels to contours
 
 % Plot
 figure;
-imagesc(big_list_launch);        % Display the array as an image
-colorbar;          % Add colorbar to show value scale
-colormap hot;
 xlabel("Time past initial launch date (days)")
 ylabel("Transfer time (days)")
 clim([0 30]);  % Set your desired color range
 set(gca, 'YDir', 'normal');
-title("Earth departure dV")
+grid on
+yline(3000, "r--")
 
 % Add contour lines
 hold on;
@@ -255,14 +251,12 @@ clabel(C, h);  % Add labels to contours
 
 % Plot
 figure;
-imagesc(big_list_capture);        % Display the array as an image
-colorbar;          % Add colorbar to show value scale
-colormap hot;
 xlabel("Time past initial launch date (days)")
 ylabel("Transfer time (days)")
 clim([0 30]);  % Set your desired color range
 set(gca, 'YDir', 'normal');
-title("Neptune capture dV")
+grid on
+yline(3000, "r--")
 
 % Add contour lines
 hold on;

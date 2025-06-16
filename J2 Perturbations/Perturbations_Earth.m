@@ -31,8 +31,8 @@ rp = 200 + radius_Earth;
 e = 0.96;
 a = rp / (1 - e);
 
-N_AR = 20;
-e_AR = linspace(0,e,N_AR);
+N_AR = 9;
+e_AR = [0 0.0701 0.1481 0.2361 0.3360 0.4509 0.5848 0.7436 0.9359];
 a_AR = rp ./ (1 - e_AR);
 
 
@@ -91,9 +91,9 @@ for idx = 1:N_AR
     
     [v_perturbed_peri, idx2] = max(vecnorm(v_perturbed(:,30:end)));
     dV(idx2) = abs(v_perturbed_peri - norm(v_perturbed(:,1)))*1e3;
-    t_perturbed = t_out(1:idx2)';
+    t_perturbed = t_out';
 
-    r_perturbed_big = [r_perturbed_big r_perturbed(:, 1:idx2)];
+    r_perturbed_big = [r_perturbed_big r_perturbed(:, 1:end)];
     r_unperturbed_big = [r_unperturbed_big r_unperturbed];
     t_perturbed_big = [t_perturbed_big t_perturbed + t_elapsed];
 
@@ -178,9 +178,9 @@ dV_mag = sum(dV)
 % Plot trajectories
 
 figure;
-plot3(r_unperturbed_big(1,:), r_unperturbed_big(2,:), r_unperturbed_big(3,:), 'b-','LineWidth', 0.75);  % unperturbed
+plot3(r_unperturbed_big(1,:), r_unperturbed_big(2,:), r_unperturbed_big(3,:), 'k-','LineWidth', 1);  % unperturbed
 hold on;
-plot3(r_perturbed_big(1,:), r_perturbed_big(2,:), r_perturbed_big(3,:), 'r--', 'LineWidth', 1.5);  % perturbed
+plot3(r_perturbed_big(1,:), r_perturbed_big(2,:), r_perturbed_big(3,:), 'r-', 'LineWidth', 0.75);  % perturbed
 
 %Mark start and end points
 % plot3(r_unperturbed_big(1,1), r_unperturbed_big(2,1), r_unperturbed_big(3,1), 'bo', 'MarkerFaceColor', 'b');
@@ -192,7 +192,7 @@ plot3(r_perturbed_big(1,:), r_perturbed_big(2,:), r_perturbed_big(3,:), 'r--', '
 % plot3(r_perturbed_big(1,end), r_perturbed_big(2,end), r_perturbed_big(3,end), 'rs');
 % text(r_perturbed_big(1,end), r_perturbed_big(2,end), r_perturbed_big(3,end), '  End (Perturbed)', 'Color', 'r');
 
-legend('Unperturbed', 'Perturbed (J2)', 'Location', 'best');
+legend('Unperturbed', 'Perturbed', 'Location', 'best');
 grid on;
 axis equal;
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');

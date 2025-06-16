@@ -2,7 +2,7 @@ clear all
 clc
 
 % Preallocate arrays for speed
-theta_array = linspace(0, 2*pi, 100);
+theta_array = linspace(0, 2*pi, 1000);
 num_angles = length(theta_array);
 oe_matrix = zeros(num_angles, 7); % Columns: h, e, RA, i, w, TA, a
 
@@ -76,29 +76,26 @@ figure;
 
 theta_array = rad2deg(theta_array);
 
-subplot(3,1,1)
-plot(theta_array, oe_matrix(:,4)) % Inclination
-xlabel('B-plane rotation angle [deg]')
-ylabel('i [deg]')
-title('Inclination vs B-plane Angle')
-grid on
-xlim([0 360])
+figure; % Create a new figure
 
-subplot(3,1,2)
-plot(theta_array, oe_matrix(:,5)) % Eccentricity
-xlabel('B-plane rotation angle [deg]')
-ylabel('\omega [deg]')
-title('Argument of periapsis vs B-plane Angle')
-grid on
-xlim([0 360])
+% Plot all three orbital elements on the same axes
+plot(theta_array, oe_matrix(:,4), 'b-', "LineWidth",2);
+hold on; % Keep the current plot active for adding more lines
+plot(theta_array, oe_matrix(:,5), 'k-', "LineWidth",2);
+plot(theta_array, oe_matrix(:,3), 'r-', "LineWidth",2);
 
-subplot(3,1,3)
-plot(theta_array, oe_matrix(:,3)) % RAAN
-xlabel('B-plane rotation angle [deg]')
-ylabel('\Omega [deg]')
-title('RAAN vs B-plane Angle')
-grid on
-xlim([0 360])
+% Add the xline (it will apply to the current axes automatically)
+x_line_value = 185.455;
+xline(x_line_value, 'k--', 'LineWidth', 1.5, 'DisplayName', 'Chosen angle'); % Black dashed line
+
+% Add labels, title, legend, and grid
+xlabel('B-plane angle \theta (°)');
+ylabel('Orbital Element Value (°)'); % General label since values might be different
+grid on;
+xlim([0 360]); % Keep the x-axis limits consistent
+set(gca, "FontSize", 14);
+%legend(["Inclination (i)", "Argument of periapsis (\omega)", "RAAN (\Omega)", "Target angle"])
+hold off; % Release the plot
 
 function result = bplane(r_sc_neptune, v_sc_neptune, mu_neptune, thetaB_deg)
     % Inputs:

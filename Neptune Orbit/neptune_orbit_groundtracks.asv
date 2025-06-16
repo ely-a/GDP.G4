@@ -12,42 +12,20 @@ set(groot,'defaultAxesYGrid','on') % Turn y grid lines on
 
 %% Ground Track Simulation Over Neptune
 
-% % === ORBIT SETUP ===
-% mu_N = 6835100;                % Neptune gravitational parameter [km^3/s^2]
-% R_orbit = 30000;               % km radius (example circular orbit)
-% inclination_deg = 45;         % orbital inclination in degrees
-% i_rad = deg2rad(inclination_deg);
-% 
-% T_orbit = 2 * pi * sqrt(R_orbit^3 / mu_N);  % orbital period in seconds
-% n_orbits = 3;                                % number of orbits to simulate
-% t = linspace(0, n_orbits * T_orbit, 1000);   % simulate N orbits
-% jd0 = 2451545.0;
-% jd_array = jd0 + t / 86400;                  % convert time to Julian date
-% 
-% % Generate inclined ECI orbit
-% r_ECI_all = zeros(3, length(t));
-% for k = 1:length(t)
-%     theta = 2*pi * t(k) / T_orbit;  % angle swept since epoch  ahhh
-%     slight dff method for calc theta and reci below
-%     x = R_orbit * cos(theta);
-%     y = R_orbit * sin(theta) * cos(i_rad);
-%     z = R_orbit * sin(theta) * sin(i_rad);
-%     r_ECI_all(:,k) = [x; y; z];
-% end
-
-
 % === LOAD FINAL ORBITAL ELEMENTS ===
 load('ScienceOrbit.mat') 
+
+oe_final = [a_final, e_final, i_final, h_final, omega_final, RAAN_final];
 
 mu_N = 6835100;                          % Neptune gravitational parameter [km^3/s^2]
 R_N = 24622;
 
-rp_newnew = R_N + 1600; 
-ra_newnew = 61098.5950141566;
-a_final = (ra_newnew + rp_newnew)/2;
-e_final = (ra_newnew - rp_newnew)/(ra_newnew + rp_newnew);
-h_final = sqrt(rp_newnew * mu_N * (1 + e_final));
-i_final = 65;
+% rp_newnew = R_N + 1700; 
+% ra_newnew = 61098.5950141566;
+% a_final = (ra_newnew + rp_newnew)/2;
+% e_final = (ra_newnew - rp_newnew)/(ra_newnew + rp_newnew);
+% h_final = sqrt(rp_newnew * mu_N * (1 + e_final));
+% i_final = 65;
 
 % === USER INPUT: INSERTION EPOCH AND TIME OFFSET TO FINAL ORBIT ===
 epoch_insertion = 2466307.86031975;             % Julian date of insertion
@@ -74,8 +52,13 @@ for k = 1:length(t)
     v_ECI_all(:,k) = v_vec;
 end
 
+r_mags = vecnorm(r_ECI_all);
+fprintf('r_ECI_all min = %.3f km, max = %.3f km\n', min(r_mags), max(r_mags));
+%fprintf('Δr = %.6f km\n', max(r_mags) - min(r_mags));
+
+
 % === CALL FUNCTION TO PLOT GROUND TRACKS ===
-%plot_ground_track_neptune_modes(r_ECI_all, jd_array, 'neptune_map.png', n_orbits);
+plot_ground_track_neptune_modes(r_ECI_all, jd_array, 'neptune_map.png', n_orbits);
 
 % == PLANE CHANGE ==
 i_target_deg = 80;
@@ -90,7 +73,7 @@ i_target_deg = 80;
 % -- This excludes final de-orbit --
 % -- Also its excluding aerobrake --
 
-t_in_sc = 5*365 - t_days;
+t_in_sc = 5*365.25 - t_days;
 p_sc = 2 * pi * a_final^(3/2) / sqrt(mu_N);
 p_sc_days = p_sc /(60*60*24);
 n_orbits_in_sc = t_in_sc/p_sc_days;
@@ -113,11 +96,11 @@ grid on
 xlabel('X [km]')
 ylabel('Y [km]')
 zlabel('Z [km]')
-title('Science Orbit and Inclined Orbit around Neptune')
+title('Science Orbit and Radiation Belt around Neptune')
 
 % Plot Neptune
-[Xs, Ys, Zs] = sphere(100);
-surf(R_N*Xs, R_N*Ys, R_N*Zs, 'FaceColor', [0 0.3 0.8], 'EdgeColor', 'none', 'FaceAlpha', 0.5, 'DisplayName', 'Neptune');
+%[Xs, Ys, Zs] = sphere(100);
+%surf(R_N*Xs, R_N*Ys, R_N*Zs, 'FaceColor', [0 0.3 0.8], 'EdgeColor', 'none', 'FaceAlpha', 0.5, 'DisplayName', 'Neptune');
 
 % Plot Orbits
 %plot3(r_science(1,:), r_science(2,:), r_science(3,:), 'k', 'DisplayName', 'Science Orbit', 'LineWidth', 2)
@@ -146,12 +129,11 @@ surf(R_N*Xs, R_N*Ys, R_N*Zs, ...
 
 % === Plot Science Orbit color-coded by L-shell ===
 scatter3(r_science(1,:), r_science(2,:), r_science(3,:), ...
-         15, L_shell, 'filled');  % color by L-shell
+         15, L_shell, 'filled', 'HandleVisibility', 'off');  % color by L-shell
 colormap('turbo'); 
 cb = colorbar; 
 cb.Label.String = 'L-shell Value';
 caxis([1 2]);  % Adjust if your orbit goes higher
-
 
 
 % === Plot Radiation Belt (L = 1.2 Shell) with Magnetic Tilt ===
@@ -184,7 +166,7 @@ zs_rot = reshape(pts_rotated(3,:), size(zs));
 % Plot the tilted radiation belt shell
 surf(xs_rot, ys_rot, zs_rot, ...
      'FaceAlpha', 0.15, 'EdgeColor', 'none', ...
-     'FaceColor', [1 0 0], 'DisplayName', 'L = 1.2 Radiation Belt (Tilted)');
+     'FaceColor', [1 0 0], 'DisplayName', 'L = 1.2 Radiation Belt');
 
 
 legend show
@@ -202,11 +184,20 @@ view(35, 25)
 % Even though you're physically < 1.2 × Rₙ (as shown in figure) radially, you’re outside L = 1.2 due to magnetic geometry
 %https://en.wikipedia.org/wiki/L-shell?utm_source=chatgpt.com
 
+% radiation TID needs to be less than like 30k max for SI based laser
+% altimeter, https://confit.atlas.jp/guide/event/jpgu2016/subject/PPS11-P08/detail?lang=en&utm_source=chatgpt.com
+% https://www2.jpgu.org/meeting/2016/session/PDF/P-PS11/PPS11-P08_e.pdf
+% dose rate: https://secwww.jhuapl.edu/techdigest/Content/techdigest/pdf/V28-N01/28-01-Maurer.pdf?utm_source=chatgpt.com
+%choosing L = 1.2 is based on earth however for approximate cals across
+%diff planets it is fine (otherwise its like 1.5 for neptune roughly )
+% some ref for the heat shield material - https://www.mdpi.com/2079-9292/12/19/4181 
+% https://ntrs.nasa.gov/api/citations/20090026532/downloads/20090026532.pdf
+
 %% == End of Life == 
 
 [r_before, v_before] = rv_from_oe(a_final, e_final, i_final, RAAN_final, omega_final, 180, mu_N);
 ra_end = a_final * (1 + e_final);
-rp_end = R_N + 250;
+rp_end = R_N + 350;
 e_end = (ra_end - rp_end)/(ra_end + rp_end);
 h_end = sqrt(rp_end * mu_N * (1 + e_end));
 v_end = h_end / ra_end;
@@ -225,6 +216,21 @@ theta_probe = acosd(cos_theta);  % in degrees
 
 fprintf('Velocity at Probe Eject = %.3f km/s\n', ...
         norm(v_probe));
+
+% -- Probe Time -- 
+
+% 2nd june 2040 - 23/3/2032 + t_days (confirm the apoapsis of science) +
+% time to 4000 km 
+
+ra_final = h_final^2/(mu_N * (1 - e_final));
+P_final = 2 * pi * sqrt(a_final^3/mu_N);
+
+t_probe_sc = P_final/2 - find_time_neptune(R_N, h_final, e_final, a_final, mu_N, ra_final) / 2;
+t_probe_sc_days = t_probe_sc /(3600 * 24);
+t_probe_nep = t_days + t_probe_sc_days;
+
+fprintf('Time from insertion for Probe = %.3f km/s\n', ...
+        t_probe_nep);
 
 %% == Radiation belt == 
 rad_tilt_deg = 47;      % Magnetic tilt [deg]
@@ -296,19 +302,19 @@ time_in_radiation = trapz(t_array, double(in_radiation));  % minutes
 fprintf('Minimum L-shell value in orbit: %.4f\n', min(L_shell));
 
 % UNCOMMMENTT
-% === Plotting ===
-% figure;
-% plot(t_array, L_shell, 'b', 'LineWidth', 2); hold on;
-% yline(L_thresh, 'r--', 'LineWidth', 1.5, 'Label', 'L = 1.2');
-% area(t_array, L_shell .* double(in_radiation), ...
-%     'FaceColor', [1 0.6 0.6], 'EdgeColor', 'none');
-% 
-% xlabel('Time since periapsis [min]');
-% ylabel('L-shell value');
-% title('L-shell Crossings During 1 Orbit');
-% legend('L-shell value', 'L = 1.2 threshold', 'In radiation zone');
-% grid on;
-% set(gca, 'FontSize', 14);
+%=== Plotting ===
+figure;
+plot(t_array, L_shell, 'b', 'LineWidth', 2); hold on;
+yline(L_thresh, 'r--', 'LineWidth', 3, 'Label', 'L = 1.2', 'FontSize', 20);
+area(t_array, L_shell .* double(in_radiation), ...
+    'FaceColor', [1 0.6 0.6], 'EdgeColor', 'none');
+
+xlabel('Time since periapsis [min]');
+ylabel('L-shell value');
+title('L-shell Crossings During 1 Orbit');
+legend('L-shell value', 'L = 1.2 threshold', 'In radiation zone');
+grid on;
+%set(gca, 'FontSize', 14);
 
 % === Output ===
 fprintf('Time in high-radiation zone (L < %.1f): %.2f minutes per orbit.\n', ...
@@ -324,15 +330,16 @@ compute_TID_material('Laser Altimeter', n_orbits_in_sc, time_in_radiation, dose_
 
 %dose_rate_GaAs = dose_rate_Si / GaAs_factor;
 
-compute_TID_material('Microwave Radiometer', n_orbits_in_sc, time_in_radiation, dose_rate, 'GaAs');
+%compute_TID_material('Microwave Radiometer', n_orbits_in_sc, time_in_radiation, dose_rate, 'GaAs');
 
+% NOTE : whatever you get for TID x10 to see if its good 
 
 %% == Rings of Neptune == 
 
 % === Load Orbit and Ring Data ===
 load('neptune_ring_data_for_analysis.mat'); 
 
-tolerance_km = 100;  % Distance tolerance for intersection
+tolerance_km = 1000;  % Distance tolerance for intersection
 
 % === Generate Orbit Positions ===
 T_orbit = 2*pi*sqrt(a_final^3 / mu_N);
@@ -350,7 +357,7 @@ end
 % === Plotting Setup ===
 figure; hold on; axis equal; grid on;
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
-title('Neptune Rings and Science Orbit');
+
 
 % Plot Neptune
 [Xs, Ys, Zs] = sphere(100);
@@ -425,16 +432,15 @@ for i = 1:length(ring_intersections)
 end
 
 
-
 % === 3D Plot Setup ===
 figure; hold on; axis equal; grid on;
 xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
-title('Neptune Rings and Science Orbit (3D)', 'FontSize', 14);
+title('Neptune Rings');
 
 % Plot Neptune Sphere
 [Xs, Ys, Zs] = sphere(100);
 surf(R_N*Xs, R_N*Ys, R_N*Zs, 'FaceColor', [0.3 0.5 1], ...
-    'EdgeColor', 'none', 'FaceAlpha', 0.5);
+    'EdgeColor', 'none', 'FaceAlpha', 0.5, 'DisplayName', 'Neptune');
 
 % Plot Science Orbit
 plot3(r_orbit(1,:), r_orbit(2,:), r_orbit(3,:), 'k', 'LineWidth', 2, ...
@@ -447,7 +453,7 @@ colors = lines(length(ring_radii));
 for i = 1:length(ring_radii)
     r_ring = double(ring_radii(i));
     incl_rad = deg2rad(ring_inclinations(i));
-    
+
     % Ring in XY plane
     x_ring = r_ring * cos(theta_ring);
     y_ring = r_ring * sin(theta_ring);
@@ -464,22 +470,120 @@ for i = 1:length(ring_radii)
           'Color', colors(i,:), 'LineWidth', 1.5, 'DisplayName', ring_names{i});
 end
 
+ring_arc_angles = {
+    [40, 60];   % Liberté arc
+    [62, 66];   % Egalité arc (Egalité 1)
+    [66, 70];   % Egalité arc (Egalité 2)
+    [72, 74];   % Fraternité arc
+    [76, 80];   % Courage arc
+};
+
+
+% === Plot Each Ring Arc in 3D ===
+colors = lines(length(ring_radii));
+
+for i = 1:length(ring_radii)
+    r_ring = double(ring_radii(i));
+    incl_rad = deg2rad(ring_inclinations(i));
+    
+    % Get arc angle limits (in degrees), then convert to radians
+    if i <= length(ring_arc_angles)
+        arc_range = deg2rad(ring_arc_angles{i});
+        theta_arc = linspace(arc_range(1), arc_range(2), 100);
+    else
+        theta_arc = linspace(0, 2*pi, 300);  % fallback to full ring
+    end
+
+    % Arc in XY plane
+    x_arc = r_ring * cos(theta_arc);
+    y_arc = r_ring * sin(theta_arc);
+    z_arc = zeros(size(x_arc));
+
+    % Apply ring inclination (rotation around X-axis)
+    R_tilt = [1 0 0;
+              0 cos(incl_rad) -sin(incl_rad);
+              0 sin(incl_rad)  cos(incl_rad)];
+    arc_coords = R_tilt * [x_arc; y_arc; z_arc];
+
+    % Plot ring arc
+    plot3(arc_coords(1,:), arc_coords(2,:), arc_coords(3,:), '-', ...
+        'Color', colors(i,:), 'LineWidth', 6, 'DisplayName', [ring_names{i}, ' Arc']);
+end
+
+
 legend show;
 view(45, 25);  % Adjust viewing angle
 
+%% == Plotting Magnetic field lines ==
+
+num_lines = 8;  % Number of meridional lines
+r_eq = 3 * R_N; % Maximum radial distance of field lines
+
+% Dipole tilt (Neptune's magnetic axis)
+tilt_deg = 47;
+tilt_rad = deg2rad(tilt_deg);
+R_tilt = [1 0 0;
+          0 cos(tilt_rad) -sin(tilt_rad);
+          0 sin(tilt_rad)  cos(tilt_rad)];
+
+theta_vals = linspace(0, pi, 100);
+
+% Plot field lines
+figure; hold on; axis equal; grid on;
+xlabel('X [km]'); ylabel('Y [km]'); zlabel('Z [km]');
+title('Neptune Magnetic Field Lines');
+
+% Neptune sphere
+[Xs, Ys, Zs] = sphere(60);
+l1 = surf(R_N*Xs, R_N*Ys, R_N*Zs, 'FaceAlpha', 0.5, 'EdgeColor', 'none', ...
+    'FaceColor', [0.3 0.5 1]);
+
+phi_vals = linspace(0, 2*pi, num_lines+1);
+phi_vals(end) = [];  % Avoid duplicate
+
+for phi = phi_vals
+    for L = [1.2, 1.5, 2, 2.5, 3]  % Field lines for different L-shells
+        r = L * R_N * (sin(theta_vals).^2);
+        x = r .* sin(theta_vals) * cos(phi);
+        y = r .* sin(theta_vals) * sin(phi);
+        z = r .* cos(theta_vals);
+
+        coords = R_tilt * [x; y; z];  % Apply magnetic tilt
+        plot3(coords(1,:), coords(2,:), coords(3,:), 'r--', 'LineWidth', 1.2);
+    end
+end
+
+% === Plot Science Orbit on Top ===
+l3 = plot3(r_orbit(1,:), r_orbit(2,:), r_orbit(3,:), 'k', 'LineWidth', 2);
+
+%legend show;
+l2 = plot3(NaN, NaN, NaN, 'r--', 'LineWidth', 1.2);
+legend([l1, l2, l3], 'Neptune', 'Magnetic Field Lines', 'Science Orbit');
+view(40, 20);
+
+
+%% == Correction Maneuvers == 
+
+target_oe = [a_final, e_final, i_final, RAAN_final, omega_final, 0];  % target [a, e, i, RAAN, omega, theta] um theta? at specific time turn into loop/=?
+tol = [10, 0.01, 0.1];                  % tolerances for [a, e, i]
+
+%[r_new, v_new, total_dv] = apply_orbit_correction(r0, v0, target_oe, mu_N,
+%tol); % current r0 and v0 at specific time? turn into loop again 
 
 
 %% === FUNCTION ===
 function plot_ground_track_neptune_modes(r_ECI_all, jd_array, texture_file, n_orbits)
     sidereal_day_neptune = 16.11 * 3600; % seconds
     omega_N = 2*pi / sidereal_day_neptune; % rad/s
-
+    
+    R_N = 24622;
     N = size(r_ECI_all, 2);
     lat = zeros(1, N);
     lon = zeros(1, N);
     alt = zeros(1, N);
     color_orbit = zeros(1, N);
     local_time_deg = zeros(1, N);
+
 
     for k = 1:N
         t_sec = (jd_array(k) - jd_array(1)) * 86400;
@@ -493,11 +597,14 @@ function plot_ground_track_neptune_modes(r_ECI_all, jd_array, texture_file, n_or
         lon(k) = atan2d(y, x);
         r_xy = sqrt(x^2 + y^2);
         lat(k) = atan2d(z, r_xy);
-        alt(k) = norm(r_ECEF) - 24764;  % altitude above Neptune radius [km]
+
+        alt(k) = norm(r_ECEF) - R_N;  % altitude above Neptune radius [km]
 
         color_orbit(k) = floor((t_sec)/ (2*pi*sqrt((30000)^3/6835100))) + 1;
         local_time_deg(k) = mod(rad2deg(theta_rot), 360); % rotation = local time
     end
+
+    fprintf('latitude array %s (%s) ---\n', lat);
 
     % Load texture
     img = imread(texture_file);
@@ -506,17 +613,21 @@ function plot_ground_track_neptune_modes(r_ECI_all, jd_array, texture_file, n_or
 
     % === FIGURE 1: Orbit color-coded ===
     figure;
+    % Increase figure size and ensure labels fit
+%set(gcf, 'Units', 'normalized', 'Position', [0.9, 0.1, 0.6, 0.8]);  % [left, bottom, width, height]
     ax = axesm('eqdcylin','MapLatLimit',[-90 90],'MapLonLimit',[-180 180],...
                'Frame','on','Grid','on','MeridianLabel','on','ParallelLabel','on');
     title('Ground Track Coloured by Orbit Number');
     xlabel('Longitude [°]');
     ylabel('Latitude [°]');
-    setm(ax,'MLabelLocation',30,'PLabelLocation',30,'FontSize',10);
+    setm(ax,'MLabelLocation',30,'PLabelLocation',30,'FontSize',13);
     geoshow(img, Rimg, 'DisplayType', 'texturemap'); hold on;
-    scatterm(lat, lon, 10, color_orbit, 'filled');
+    scatterm(lat, lon, 20, color_orbit, 'filled');
     % colormap(lines(n_orbits)); colorbar('Ticks', 1:n_orbits, 'TickLabels', compose('Orbit %d', 1:n_orbits));
     colormap(hsv(n_orbits)); colorbar('Ticks', 1:n_orbits, 'TickLabels', compose('Orbit %d', 1:n_orbits));
     caxis([1 n_orbits]);
+    
+    %ax.Position(3) = ax.Position(3) + 0.1;  % reduce width if needed
 
     % Start/End Markers
     plotm(lat(1), lon(1), 'y^', 'MarkerSize', 8, 'MarkerFaceColor', 'y');
@@ -529,15 +640,25 @@ function plot_ground_track_neptune_modes(r_ECI_all, jd_array, texture_file, n_or
     title('Ground Track Coloured by Altitude');
     xlabel('Longitude [°]');
     ylabel('Latitude [°]');
-    setm(ax2,'MLabelLocation',30,'PLabelLocation',30,'FontSize',10);
+    setm(ax2,'MLabelLocation',30,'PLabelLocation',30,'FontSize',13); %%%%%%%%%%%%%
     geoshow(img, Rimg, 'DisplayType', 'texturemap'); hold on;
-    scatterm(lat, lon, 10, alt, 'filled');
+    scatterm(lat, lon, 20, alt, 'filled');
 colormap(turbo);  % Use vivid colormap to contrast Neptune's blue background
+minny = min(alt)
+maxxy = max(alt)
 hcb = colorbar; caxis([min(alt) max(alt)]);
+pos = hcb.Position;        % [left bottom width height]
+pos(1) = pos(1) + 0.03;     % move right by 0.03 (adjust as needed)
+hcb.Position = pos;
 ticks = linspace(min(alt), max(alt), 5);
+% Set 5 evenly spaced ticks and labels
 hcb.Ticks = ticks;
-hcb.Ticks = ticks(3);
-hcb.TickLabels = compose('%.2f km', ticks(3));
+%hcb.Ticks = ticks(3);
+%hcb.TickLabels = compose('%.2f km', ticks); 
+sigfigs = 3;
+formatted_ticks = arrayfun(@(x) sprintf(['%.' num2str(sigfigs) 'g km'], x), ticks, 'UniformOutput', false);
+hcb.TickLabels = formatted_ticks;
+
 hcb.FontSize = 20;
 hcb.Position(3) = 0.015;
 
@@ -552,16 +673,17 @@ hcb.Position(3) = 0.015;
     title('Ground Track Coloured by Local Time of Day');
     xlabel('Longitude [°]');
     ylabel('Latitude [°]');
-    setm(ax3,'MLabelLocation',30,'PLabelLocation',30,'FontSize',10);
+    setm(ax3,'MLabelLocation',30,'PLabelLocation',30,'FontSize',13);
     geoshow(img, Rimg, 'DisplayType', 'texturemap'); hold on;
-    scatterm(lat, lon, 10, local_time_deg, 'filled');
-    colormap('hot'); colorbar; caxis([0 360]);
+    scatterm(lat, lon, 20, local_time_deg, 'filled');
+    colormap('hot'); %colorbar; 
+    caxis([0 360]);
 
     % Annotate timestamps every ~1/4 orbit
     step = round(N / 12);
     for k = 1:step:N
         time_str = datestr((jd_array(k)-2451545)*86400/86400, 'HH:MM');
-        textm(lat(k), lon(k), time_str, 'FontSize', 10, 'Color', 'w');
+        textm(lat(k), lon(k), time_str, 'FontSize', 15, 'Color', 'w');
     end
 end
 
@@ -607,7 +729,7 @@ function [r_ECI_out, v_ECI_out, jd_array_after] = rvj_from_pc(r0, v0, i_target_d
         E = kepler_E(M, e0);
         theta = 2 * atan2(sqrt(1 + e0) * sin(E/2), sqrt(1 - e0) * cos(E/2));
         [r_vec, v_vec] = rv_from_oe(a0, e0, i_target_deg, Omega0, omega0, rad2deg(theta), mu_N);
-        r_ECI_out(:, k) = r_vec; % does this include the intial one being r_after, v_after
+        r_ECI_out(:, k) = r_vec; 
         v_ECI_out(:,k) = v_vec;
     end
 end
@@ -674,8 +796,8 @@ end
 
 function compute_TID_material(instrument_name, orbits, time_per_orbit_min, dose_rate_unshielded, material)
     % === Shielding thicknesses (mm) and attenuation factors (approximate) ===
-    shielding_mm = [0, 1, 3, 5, 10];     
-    attenuation_factors = [1.00, 0.50, 0.20, 0.10, 0.03];  
+    shielding_mm = [0, 1, 3, 5, 10, 100];     
+    attenuation_factors = [1.00, 0.50, 0.20, 0.10, 0.03, 0.01];  
 
     % === Material scaling (GaAs absorbs less ionising dose than Si) ===
     switch lower(material)
@@ -706,3 +828,104 @@ function compute_TID_material(instrument_name, orbits, time_per_orbit_min, dose_
         fprintf('Shielding: %2d mm Al → TID = %.0f rad(%s)\n', shield, TID_material, upper(material));
     end
 end
+
+
+function [r_corrected, v_corrected, total_dv] = apply_orbit_correction(r0, v0, target_oe, mu, tol)
+% Automatically corrects a, e, and i if beyond tolerance
+% INPUTS:
+%   r0, v0       : Initial position and velocity [km, km/s]
+%   target_oe    : [a, e, i, RAAN, omega, theta] in km and degrees
+%   mu           : Gravitational parameter [km^3/s^2]
+%   tol          : Tolerance for [a, e, i] [e.g. [10, 0.01, 0.1] for km, -, deg]
+
+% === target elements ===
+a_target = target_oe(1);
+e_target = target_oe(2);
+i_target = deg2rad(target_oe(3));  % radians
+
+% === Get current orbital elements ===
+[a0, e0, h0, i0, RAAN0, omega0, theta0] = oe_from_rv(r0, v0, mu);
+total_dv = 0;
+r = r0;
+v = v0;
+
+% === 1. Semi-major axis correction ===
+if abs(a0 - a_target) > tol(1)
+    fprintf('Correcting semi-major axis: %.1f → %.1f km\n', a0, a_target);
+    % Do tangential burn at current point
+    v_current = norm(v);
+    r_mag = norm(r);
+    v_desired = sqrt(mu * (2/r_mag - 1/a_target));
+    dv_a = v_desired - v_current;
+    v = v + (dv_a / v_current) * v;  % Apply tangential burn
+    total_dv = total_dv + abs(dv_a);
+    [a0, e0, h0, i0, RAAN0, omega0, theta0] = oe_from_rv(r, v, mu);
+end
+
+% === 2. Eccentricity correction at periapsis or apoapsis ===
+if abs(e0 - e_target) > tol(2)
+    fprintf('Correcting eccentricity: %.3f → %.3f\n', e0, e_target);
+    if e0 > e_target
+        theta_corr = 180;  % apoapsis
+    else
+        theta_corr = 0;    % periapsis
+    end
+    [r_corr, v_corr] = rv_from_oe(a0, e0, i0, RAAN0, omega0, theta_corr, mu);
+    r = r_corr;
+    v_mag = norm(v_corr);
+    r_mag = norm(r_corr);
+    v_desired = sqrt(mu * (2/r_mag - 1/a0));  % from vis-viva with target e
+    dv_e = v_desired - v_mag;
+    v = v_corr + (dv_e / v_mag) * v_corr;
+    total_dv = total_dv + abs(dv_e);
+    [a0, e0, h0, i0, RAAN0, omega0, theta0] = oe_from_rv(r, v, mu);
+end
+
+% === 3. Inclination correction at node ===
+if abs(rad2deg(i0 - i_target)) > tol(3)
+    fprintf('Correcting inclination: %.2f° → %.2f°\n', rad2deg(i0), rad2deg(i_target));
+    % At ascending node (theta ≈ 0), apply out-of-plane burn
+    [r_corr, v_corr] = rv_from_oe(a0, e0, i0, RAAN0, omega0, 0, mu);
+    v_mag = norm(v_corr);
+    delta_i = abs(i0 - i_target);
+    dv_i = 2 * v_mag * sin(delta_i/2);
+    % Apply out-of-plane component
+    h = cross(r_corr, v_corr);
+    normal = h / norm(h);  % direction perpendicular to orbit
+    v = v_corr + dv_i * cross(normal, v_corr) / norm(v_corr);  % rotate in plane
+    total_dv = total_dv + abs(dv_i);
+end
+
+r_corrected = r;
+v_corrected = v;
+
+fprintf('Total correction ΔV applied: %.3f km/s\n', total_dv);
+end
+
+function [t] = find_time_neptune(R, h, e, a, mu, altitude)
+
+    r_need = R + altitude;  
+    % theta_need = acosd((h^2 / (mu*r_need) - 1)/e)
+    % 
+    % E_need = 2 * atan( sqrt((1-e)/(1+e)) * tand(theta_need/2) );
+
+    % Clamp cos(theta) to avoid NaNs due to floating point precision
+    cos_theta = (h^2 / (mu * r_need) - 1) / e;
+    cos_theta = max(-1, min(1, cos_theta));
+    theta_rad = acos(cos_theta);  % radians
+
+    % Eccentric anomaly (elliptical orbit)
+    E_need = 2 * atan( sqrt((1 - e)/(1 + e)) * tan(theta_rad / 2) );
+
+    M_need = E_need - e * sin(E_need);
+    if M_need < 0
+        M_need = M_need + 2*pi;
+    end
+    P_need = 2 * pi * sqrt(a^3 / mu);
+    T_need = M_need * P_need/(2*pi);
+    t = T_need * 2;
+    %t = t /(3600);
+
+end 
+
+
